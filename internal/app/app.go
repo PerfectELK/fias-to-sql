@@ -3,8 +3,11 @@ package app
 import (
 	"errors"
 	"fias_to_sql/internal/services/disk"
+	"fias_to_sql/internal/services/download"
 	"fias_to_sql/internal/services/fias"
 	"fmt"
+	"os"
+	"path"
 )
 
 func App() error {
@@ -21,7 +24,10 @@ func App() error {
 		return err
 	}
 
-	fmt.Println(link)
+	pwd, _ := os.Getwd()
+	pwd = path.Join(pwd, "archive.zip")
+	download.File(link, pwd)
+	fmt.Println("download complete")
 
 	return nil
 }
