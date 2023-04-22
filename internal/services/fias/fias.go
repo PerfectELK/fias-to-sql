@@ -87,7 +87,8 @@ func ParseArchive(archivePath string) error {
 	defer zf.Close()
 
 	for _, file := range zf.File {
-		if !strings.Contains(file.Name, fias.ADDRRESS_FILE_PART) {
+
+		if !strings.Contains(file.Name, fias.OBJECT_FILE_PART) {
 			continue
 		}
 		if strings.Contains(file.Name, "_PARAMS_") {
@@ -96,12 +97,19 @@ func ParseArchive(archivePath string) error {
 		if strings.Contains(file.Name, "_DIVISION_") {
 			continue
 		}
+		if strings.Contains(file.Name, "_OBJ_TYPES_") {
+			continue
+		}
 
 		c, err := file.Open()
 		if err != nil {
 			return err
 		}
-		ProcessingXml(c)
+		list, err := ProcessingXml(c)
+		fmt.Println(list)
+		if err != nil {
+			return err
+		}
 		// Todo debug
 		return nil
 	}
