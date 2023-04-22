@@ -20,7 +20,10 @@ func App() error {
 		return err
 	}
 
-	fias.ParseArchive(path)
+	err = fias.ParseArchive(path)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

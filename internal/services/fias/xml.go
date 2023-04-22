@@ -2,60 +2,32 @@ package fias
 
 import (
 	"encoding/xml"
-	"fmt"
+	"fias_to_sql/internal/services/fias/types"
 	"io"
 )
-
-type fiasObject interface {
-	getFiasObjectId() int64
-}
-
-type address struct {
-	fiasObject
-	Id         int64  `xml:"ID,attr"`
-	ObjectId   int64  `xml:"OBJECTID,attr"`
-	ObjectGuid string `xml:"OBJECTGUID,attr"`
-	TypeName   string `xml:"TYPENAME,attr"`
-	Level      int64  `xml:"LEVEL,attr"`
-	Name       string `xml:"NAME,attr"`
-}
-
-type house struct {
-	fiasObject
-	Id       int64 `xml:"ID,attr"`
-	ObjectId int64 `xml:"OBJECTID,attr"`
-	HouseNum int64 `xml:"HOUSENUM,attr"`
-	AddNum   int64 `xml:"ADDNUM,attr"`
-	AddNum2  int64 `xml:"ADDNUM2,attr"`
-}
-
-type hierarchy struct {
-	fiasObject
-}
-
-type FiasObjectsList struct {
-	addresses []fiasObject
-}
-
-func (a FiasObjectsList) addObject(object fiasObject) {
-	a.addresses = append(a.addresses, object)
-}
-
-func (a FiasObjectsList) clear() {
-	a.addresses = make([]fiasObject, 0)
-}
 
 func ProcessingXml(
 	closer io.ReadCloser,
 	object ...string,
-) (*FiasObjectsList, error) {
+) (*types.FiasObjectList, error) {
 	defer closer.Close()
-	objectType := "OBJECT"
+	objectType := "object"
 	if len(object) > 0 {
 		objectType = object[0]
 	}
+
+	var xmlTag string
+	switch objectType {
+	case "object":
+		xmlTag = "OBJECT"
+	case "house":
+		xmlTag = "HOUSE"
+	case "hierarchy":
+		xmlTag = "ITEM"
+	}
+
 	decoder := xml.NewDecoder(closer)
-	al := new(FiasObjectsList)
+	al := new(types.FiasObjectList)
 	for {
 		token, tokenErr := decoder.Token()
 		if tokenErr != nil {
@@ -66,17 +38,21 @@ func ProcessingXml(
 		}
 		switch se := token.(type) {
 		case xml.StartElement:
-			if se.Name.Local == objectType {
-				var fiasObj fiasObject
+			if se.Name.Local == xmlTag {
+				var fiasObj types.FiasObject
 				switch objectType {
-				case "OBJECT":
-					fiasObj = &address{}
+				case "object":
+					fiasObj = &types.Address{}
+				case "house":
+					fiasObj = &types.House{}
+				case "hierarchy":
+					fiasObj = &types.Hierarchy{}
 				}
 				err := decoder.DecodeElement(&fiasObj, &se)
 				if err != nil {
 					return nil, err
 				}
-				fmt.Println(fiasObj)
+				al.AddObject(fiasObj)
 			}
 		}
 	}

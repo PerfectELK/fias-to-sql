@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"errors"
 	"fias_to_sql/internal/config/fias"
+	"fias_to_sql/internal/services/db"
 	"fias_to_sql/internal/services/download"
 	"fias_to_sql/internal/services/terminal"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -86,11 +88,25 @@ func ParseArchive(archivePath string) error {
 	}
 	defer zf.Close()
 
+	var wg sync.WaitGroup
+	gorutinesCount := 0
 	for _, file := range zf.File {
+		var objectType string
 
-		if !strings.Contains(file.Name, fias.OBJECT_FILE_PART) {
+		if strings.Contains(file.Name, fias.OBJECT_FILE_PART) {
+			objectType = "object"
+		}
+		if strings.Contains(file.Name, fias.HOUSES_FILE_PART) {
+			objectType = "house"
+		}
+		if strings.Contains(file.Name, fias.HIERARCHY_FILE_PART) {
+			objectType = "hierarchy"
+		}
+
+		if objectType == "" {
 			continue
 		}
+
 		if strings.Contains(file.Name, "_PARAMS_") {
 			continue
 		}
@@ -101,18 +117,41 @@ func ParseArchive(archivePath string) error {
 			continue
 		}
 
-		c, err := file.Open()
-		if err != nil {
-			return err
+		for {
+			if gorutinesCount > 5 {
+				time.Sleep(time.Second * 2)
+			} else {
+				break
+			}
 		}
-		list, err := ProcessingXml(c)
-		fmt.Println(list)
-		if err != nil {
+
+		wg.Add(1)
+		gorutinesCount += 1
+		go func(file *zip.File) (err error) {
+			defer wg.Done()
+			c, err := file.Open()
+			if err != nil {
+				fmt.Println(file.Name+" [FAIL]", err)
+				return err
+			}
+
+			list, err := ProcessingXml(c, objectType)
+			if err != nil {
+				fmt.Println(file.Name+" [FAIL]", err)
+				return err
+			}
+			listLen := len(list.Addresses)
+			err = db.ImportToDb(list)
+			if err != nil {
+				fmt.Println(file.Name+" [FAIL]", err)
+				return err
+			}
+			fmt.Println(file.Name, ": records amount (", listLen, ") [OK]")
+			gorutinesCount -= 1
 			return err
-		}
-		// Todo debug
-		return nil
+		}(file)
 	}
+	wg.Wait()
 
 	return nil
 }
