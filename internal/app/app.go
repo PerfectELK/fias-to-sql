@@ -5,6 +5,7 @@ import (
 	"fias_to_sql/internal/config"
 	"fias_to_sql/internal/services/disk"
 	"fias_to_sql/internal/services/fias"
+	"fias_to_sql/migrations"
 	"fias_to_sql/pkg/db"
 )
 
@@ -28,6 +29,15 @@ func App() error {
 	}
 
 	_, err = db.GetDbInstance()
+	if err != nil {
+		return err
+	}
+
+	err = migrations.CreateDatabase()
+	if err != nil {
+		return err
+	}
+	err = migrations.CreateTables()
 	if err != nil {
 		return err
 	}
