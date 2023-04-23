@@ -2,3 +2,6 @@
 .env
 archive.zip
 archive.zip.test
+build/mysql
+build/pgsql
+build/.env

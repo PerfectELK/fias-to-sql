@@ -2,18 +2,19 @@ package fias
 
 import (
 	"archive/zip"
+	"context"
 	"errors"
-	"fias_to_sql/internal/config/fias"
-	"fias_to_sql/internal/services/db"
+	"fias_to_sql/internal/config"
 	"fias_to_sql/internal/services/download"
+	"fias_to_sql/internal/services/fias/types"
 	"fias_to_sql/internal/services/terminal"
 	"fmt"
 	"github.com/go-rod/rod"
+	"golang.org/x/sync/errgroup"
 	"os"
 	"path"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -21,10 +22,10 @@ func GetLinkOnNewestArchive() (string, error) {
 	browser := rod.New().MustConnect()
 	defer browser.MustClose()
 
-	page := browser.MustPage(fias.ARCHIVE_PAGE_LINK)
+	page := browser.MustPage(config.GetConfig("ARCHIVE_PAGE_LINK"))
 	page.MustWaitLoad()
 
-	links := page.MustElements(fias.ARCHIVE_LINK_SELECTOR)
+	links := page.MustElements(config.GetConfig("ARCHIVE_LINK_SELECTOR"))
 	r, err := regexp.Compile(`(\d\d\d\d.\d\d.\d\d)`)
 	if err != nil {
 		return "", err
@@ -52,7 +53,7 @@ func GetLinkOnNewestArchive() (string, error) {
 }
 
 func GetArchivePath() (string, error) {
-	// Todo debug
+	//Todo debug
 	return "E:\\Sources\\my_project\\fias_to_sql\\archive.zip", nil
 	isHaveArchive := terminal.YesNoPrompt("do you have fias archive?")
 	if isHaveArchive {
@@ -81,25 +82,25 @@ func GetArchivePath() (string, error) {
 	return pwd, nil
 }
 
-func ParseArchive(archivePath string) error {
+func ImportXmlToDb(archivePath string) error {
 	zf, err := zip.OpenReader(archivePath)
 	if err != nil {
 		return err
 	}
 	defer zf.Close()
 
-	var wg sync.WaitGroup
-	gorutinesCount := 0
+	mutexChan := make(chan struct{}, 4)
+	g, ctx := errgroup.WithContext(context.Background())
 	for _, file := range zf.File {
 		var objectType string
 
-		if strings.Contains(file.Name, fias.OBJECT_FILE_PART) {
+		if strings.Contains(file.Name, config.GetConfig("OBJECT_FILE_PART")) {
 			objectType = "object"
 		}
-		if strings.Contains(file.Name, fias.HOUSES_FILE_PART) {
+		if strings.Contains(file.Name, config.GetConfig("HOUSES_FILE_PART")) {
 			objectType = "house"
 		}
-		if strings.Contains(file.Name, fias.HIERARCHY_FILE_PART) {
+		if strings.Contains(file.Name, config.GetConfig("HIERARCHY_FILE_PART")) {
 			objectType = "hierarchy"
 		}
 
@@ -116,42 +117,39 @@ func ParseArchive(archivePath string) error {
 		if strings.Contains(file.Name, "_OBJ_TYPES_") {
 			continue
 		}
+		_file := file
+		g.Go(func() error {
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+				mutexChan <- struct{}{}
+				c, err := _file.Open()
+				if err != nil {
+					return err
+				}
 
-		for {
-			if gorutinesCount > 5 {
-				time.Sleep(time.Second * 2)
-			} else {
-				break
+				list, err := ProcessingXml(c, objectType)
+				if err != nil {
+					return err
+				}
+				listLen := len(list.Addresses)
+				err = importToDb(list)
+				if err != nil {
+					return err
+				}
+				<-mutexChan
+				fmt.Println(_file.Name, ": records amount (", listLen, ") [OK]")
+				return nil
 			}
-		}
-
-		wg.Add(1)
-		gorutinesCount += 1
-		go func(file *zip.File) (err error) {
-			defer wg.Done()
-			c, err := file.Open()
-			if err != nil {
-				fmt.Println(file.Name+" [FAIL]", err)
-				return err
-			}
-
-			list, err := ProcessingXml(c, objectType)
-			if err != nil {
-				fmt.Println(file.Name+" [FAIL]", err)
-				return err
-			}
-			listLen := len(list.Addresses)
-			err = db.ImportToDb(list)
-			if err != nil {
-				fmt.Println(file.Name+" [FAIL]", err)
-				return err
-			}
-			fmt.Println(file.Name, ": records amount (", listLen, ") [OK]")
-			gorutinesCount -= 1
-			return err
-		}(file)
+		})
 	}
-	wg.Wait()
 
+	err = g.Wait()
+	return err
+}
+
+func importToDb(list *types.FiasObjectList) error {
+	list.Clear()
 	return nil
 }

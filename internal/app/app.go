@@ -2,8 +2,10 @@ package app
 
 import (
 	"errors"
+	"fias_to_sql/internal/config"
 	"fias_to_sql/internal/services/disk"
 	"fias_to_sql/internal/services/fias"
+	"fias_to_sql/pkg/db"
 )
 
 func App() error {
@@ -20,7 +22,17 @@ func App() error {
 		return err
 	}
 
-	err = fias.ParseArchive(path)
+	err = config.InitConfig()
+	if err != nil {
+		return err
+	}
+
+	_, err = db.GetDbInstance()
+	if err != nil {
+		return err
+	}
+
+	err = fias.ImportXmlToDb(path)
 	if err != nil {
 		return err
 	}
