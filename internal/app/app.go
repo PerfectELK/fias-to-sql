@@ -42,7 +42,7 @@ func App() error {
 		return err
 	}
 
-	err = fias.ImportXmlToDb(path)
+	err = fias.ImportXml(path)
 	if err != nil {
 		return err
 	}

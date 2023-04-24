@@ -5,3 +5,4 @@ archive.zip.test
 build/mysql
 build/pgsql
 build/.env
+storage

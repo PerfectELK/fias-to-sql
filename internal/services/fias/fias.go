@@ -3,6 +3,7 @@ package fias
 import (
 	"archive/zip"
 	"context"
+	"encoding/json"
 	"errors"
 	"fias_to_sql/internal/config"
 	"fias_to_sql/internal/services/download"
@@ -11,6 +12,7 @@ import (
 	"fmt"
 	"github.com/go-rod/rod"
 	"golang.org/x/sync/errgroup"
+	"io"
 	"os"
 	"path"
 	"regexp"
@@ -82,7 +84,15 @@ func GetArchivePath() (string, error) {
 	return pwd, nil
 }
 
-func ImportXmlToDb(archivePath string) error {
+func ImportXml(
+	archivePath string,
+	importDestinationStr ...string,
+) error {
+	importDestination := "json"
+	if len(importDestinationStr) > 0 {
+		importDestination = importDestinationStr[0]
+	}
+
 	zf, err := zip.OpenReader(archivePath)
 	if err != nil {
 		return err
@@ -134,7 +144,16 @@ func ImportXmlToDb(archivePath string) error {
 					return err
 				}
 				listLen := len(list.Addresses)
-				err = importToDb(list)
+
+				switch importDestination {
+				case "db":
+					err = importToDb(list)
+				case "json":
+					err = importToJson(list)
+				default:
+					err = importToDb(list)
+				}
+
 				if err != nil {
 					return err
 				}
@@ -143,13 +162,88 @@ func ImportXmlToDb(archivePath string) error {
 				return nil
 			}
 		})
+		//Todo debug
+		break
 	}
 
 	err = g.Wait()
+	if err != nil {
+		return err
+	}
+
+	if importDestination == "json" {
+		err = fixJsons()
+	}
+
 	return err
 }
 
 func importToDb(list *types.FiasObjectList) error {
 	list.Clear()
+	return nil
+}
+
+func importToJson(list *types.FiasObjectList) error {
+	pwd, _ := os.Getwd()
+	//housesFile, _ := os.OpenFile(path.Join(pwd, "/storage/houses.json"), os.O_CREATE|os.O_WRONLY, 0644)
+	//hierarchyFile, _ := os.OpenFile(path.Join(pwd, "/storage/hierarchy.json"), os.O_CREATE|os.O_WRONLY, 0644)
+
+	for _, item := range list.Addresses {
+		switch fiasObj := item.(type) {
+		case *types.Address:
+			addressesFile, _ := os.OpenFile(path.Join(pwd, "/storage/addresses.json"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			defer addressesFile.Close()
+			j, err := json.Marshal(fiasObj)
+			if err != nil {
+				return err
+			}
+			addressesFile.Write(j)
+			//case *types.House
+			//case *types.Hierarchy
+		}
+	}
+	return nil
+}
+
+func fixJsons() error {
+	pwd, _ := os.Getwd()
+	addressesFile, _ := os.Open(path.Join(pwd, "/storage/addresses.json"))
+	addressesTmpFile, _ := os.OpenFile(path.Join(pwd, "/storage/addresses.tmp.json"), os.O_CREATE|os.O_WRONLY, 644)
+
+	b := make([]byte, 32*1024)
+	addressesTmpFile.WriteString("[")
+	for {
+		_, err := addressesFile.Read(b)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+
+		str := string(b[:])
+		startPos := 0
+		for pos, ch := range str {
+			if ch == '}' && str[pos+1] == '{' {
+				addressesTmpFile.WriteString(str[startPos:pos+1] + ",")
+				startPos = pos + 1
+			}
+			if ch == '}' && str[pos+1] != '{' {
+				addressesTmpFile.WriteString(str[startPos : pos+1])
+				startPos = 0
+				break
+			}
+		}
+		if startPos != 0 {
+			addressesTmpFile.WriteString(str[startPos:] + ",")
+		}
+	}
+	addressesTmpFile.WriteString("]")
+
+	addressesFile.Close()
+	os.Remove(path.Join(pwd, "/storage/addresses.json"))
+	addressesTmpFile.Close()
+	os.Rename(path.Join(pwd, "/storage/addresses.tmp.json"), path.Join(pwd, "/storage/addresses.json"))
+
 	return nil
 }
