@@ -2,6 +2,7 @@ package fias
 
 import (
 	"archive/zip"
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -162,8 +163,6 @@ func ImportXml(
 				return nil
 			}
 		})
-		//Todo debug
-		break
 	}
 
 	err = g.Wait()
@@ -172,7 +171,19 @@ func ImportXml(
 	}
 
 	if importDestination == "json" {
-		err = fixJsons()
+		pwd, _ := os.Getwd()
+		err = fixJson(pwd + "/storage/addresses.json")
+		if err != nil {
+			return err
+		}
+		err = fixJson(pwd + "/storage/houses.json")
+		if err != nil {
+			return err
+		}
+		err = fixJson(pwd + "/storage/hierarchy.json")
+		if err != nil {
+			return err
+		}
 	}
 
 	return err
@@ -185,8 +196,6 @@ func importToDb(list *types.FiasObjectList) error {
 
 func importToJson(list *types.FiasObjectList) error {
 	pwd, _ := os.Getwd()
-	//housesFile, _ := os.OpenFile(path.Join(pwd, "/storage/houses.json"), os.O_CREATE|os.O_WRONLY, 0644)
-	//hierarchyFile, _ := os.OpenFile(path.Join(pwd, "/storage/hierarchy.json"), os.O_CREATE|os.O_WRONLY, 0644)
 
 	for _, item := range list.Addresses {
 		switch fiasObj := item.(type) {
@@ -198,52 +207,66 @@ func importToJson(list *types.FiasObjectList) error {
 				return err
 			}
 			addressesFile.Write(j)
-			//case *types.House
-			//case *types.Hierarchy
+		case *types.House:
+			housesFile, _ := os.OpenFile(path.Join(pwd, "/storage/houses.json"), os.O_CREATE|os.O_WRONLY, 0644)
+			defer housesFile.Close()
+			j, err := json.Marshal(fiasObj)
+			if err != nil {
+				return err
+			}
+			housesFile.Write(j)
+		case *types.Hierarchy:
+			hierarchyFile, _ := os.OpenFile(path.Join(pwd, "/storage/hierarchy.json"), os.O_CREATE|os.O_WRONLY, 0644)
+			defer hierarchyFile.Close()
+			j, err := json.Marshal(fiasObj)
+			if err != nil {
+				return err
+			}
+			hierarchyFile.Write(j)
 		}
 	}
 	return nil
 }
 
-func fixJsons() error {
-	pwd, _ := os.Getwd()
-	addressesFile, _ := os.Open(path.Join(pwd, "/storage/addresses.json"))
-	addressesTmpFile, _ := os.OpenFile(path.Join(pwd, "/storage/addresses.tmp.json"), os.O_CREATE|os.O_WRONLY, 644)
+func fixJson(filePath string) error {
+	addressesFile, _ := os.Open(filePath)
+	addressesTmpFile, _ := os.OpenFile(filePath+".tmp", os.O_CREATE|os.O_WRONLY, 644)
 
-	b := make([]byte, 32*1024)
+	byteLength := 1024
+	b := make([]byte, byteLength)
+	br := bufio.NewReader(addressesFile)
 	addressesTmpFile.WriteString("[")
 	for {
-		_, err := addressesFile.Read(b)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
+		n, err := br.Read(b)
+		if err != nil && err != io.EOF {
 			return err
 		}
 
-		str := string(b[:])
-		startPos := 0
-		for pos, ch := range str {
-			if ch == '}' && str[pos+1] == '{' {
-				addressesTmpFile.WriteString(str[startPos:pos+1] + ",")
-				startPos = pos + 1
-			}
-			if ch == '}' && str[pos+1] != '{' {
-				addressesTmpFile.WriteString(str[startPos : pos+1])
-				startPos = 0
-				break
+		if err != nil {
+			break
+		}
+		str := string(b[0:n])
+
+		begin := 0
+		for p, ch := range str {
+			if ch == '}' {
+				addressesTmpFile.WriteString(str[begin:p+1] + ",")
+				begin = p + 1
 			}
 		}
-		if startPos != 0 {
-			addressesTmpFile.WriteString(str[startPos:] + ",")
-		}
+
+		addressesTmpFile.WriteString(str[begin:n])
 	}
+
 	addressesTmpFile.WriteString("]")
+	stat, _ := addressesTmpFile.Stat()
+	size := stat.Size()
+	addressesTmpFile.WriteAt([]byte(" "), size-2)
 
 	addressesFile.Close()
-	os.Remove(path.Join(pwd, "/storage/addresses.json"))
+	os.Remove(filePath)
 	addressesTmpFile.Close()
-	os.Rename(path.Join(pwd, "/storage/addresses.tmp.json"), path.Join(pwd, "/storage/addresses.json"))
+	os.Rename(filePath+".tmp", filePath)
 
 	return nil
 }
