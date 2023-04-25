@@ -16,8 +16,11 @@ type Processor struct {
 	where       [][]string
 }
 
-func (m *Processor) Connect() error {
+func (m *Processor) Connect(dbName ...string) error {
 	connectStr := config.GetConfig("DB_USER") + ":" + config.GetConfig("DB_PASSWORD") + "@tcp(" + config.GetConfig("DB_HOST") + ":" + config.GetConfig("DB_PORT") + ")/"
+	if len(dbName) > 0 {
+		connectStr += dbName[0]
+	}
 	db, err := sql.Open("mysql", connectStr)
 	if err != nil {
 		return err
@@ -32,12 +35,45 @@ func (m *Processor) Disconnect() error {
 	return m.db.Close()
 }
 
-func (m *Processor) Exec(q string) error {
-	_, err := m.db.Query(q)
-	return err
+func (m Processor) Exec(q string) error {
+	rows, err := m.db.Query(q)
+	if err != nil {
+		return err
+	}
+	rows.Close()
+	return nil
 }
 
-func (m *Processor) Insert(mm map[string]string) error {
+func (m *Processor) Insert(table string, mm map[string]string) error {
+	queryStr := "INSERT INTO " + table
+	var keys []string
+	var values []string
+	for key, elem := range mm {
+		if elem == "" {
+			continue
+		}
+		keys = append(keys, key)
+		values = append(values, elem)
+	}
+
+	keysStr := ""
+	valuesStr := ""
+	for key, _ := range keys {
+		afterStr := ""
+		if key != len(keys)-1 {
+			afterStr += ", "
+		}
+		keysStr += keys[key] + afterStr
+		valuesStr += "\"" + values[key] + "\"" + afterStr
+	}
+
+	queryStr += " (" + keysStr + ") VALUES (" + valuesStr + ");"
+	return m.Exec(queryStr)
+}
+
+func (m *Processor) InsertList(table string, keys []string, values [][]string) error {
+	queryStr := "INSERT INTO " + table
+
 	return nil
 }
 
@@ -60,10 +96,16 @@ func (m *Processor) Select(s []string) abstract.DbProcessor {
 	return m
 }
 
-func (m *Processor) Get() map[string]string {
-	return nil
+func (m *Processor) Get() (map[string]string, error) {
+	return nil, nil
 }
 
 func (m *Processor) Use(q string) error {
-	return m.Exec("USE " + q)
+	m.db.Close()
+	m.isConnected = false
+	return m.Connect(q)
+}
+
+func (m *Processor) Query(q string) (*sql.Rows, error) {
+	return m.db.Query(q)
 }

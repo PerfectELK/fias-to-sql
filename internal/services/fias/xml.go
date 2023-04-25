@@ -52,6 +52,9 @@ func ProcessingXml(
 				if err != nil {
 					return nil, err
 				}
+				if !fiasObj.GetIsActive() {
+					continue
+				}
 				al.AddObject(fiasObj)
 			}
 		}

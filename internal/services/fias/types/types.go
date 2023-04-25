@@ -1,7 +1,7 @@
 package types
 
 type FiasObject interface {
-	getIsActive() bool
+	GetIsActive() bool
 }
 
 type Address struct {
@@ -16,11 +16,12 @@ type Address struct {
 
 type House struct {
 	FiasObject
-	ObjectId int64  `xml:"OBJECTID,attr"`
-	HouseNum string `xml:"HOUSENUM,attr"`
-	AddNum   string `xml:"ADDNUM,attr"`
-	AddNum2  string `xml:"ADDNUM2,attr"`
-	IsActive bool   `xml:"ISACTIVE,attr"`
+	ObjectId   int64  `xml:"OBJECTID,attr"`
+	ObjectGuid string `xml:"OBJECTGUID,attr"`
+	HouseNum   string `xml:"HOUSENUM,attr"`
+	AddNum     string `xml:"ADDNUM,attr"`
+	AddNum2    string `xml:"ADDNUM2,attr"`
+	IsActive   bool   `xml:"ISACTIVE,attr"`
 }
 
 type Hierarchy struct {
@@ -31,13 +32,13 @@ type Hierarchy struct {
 	IsActive    bool  `xml:"ISACTIVE,attr"`
 }
 
-func (f Address) getIsActive() bool {
+func (f Address) GetIsActive() bool {
 	return f.IsActive
 }
-func (f House) getIsActive() bool {
+func (f House) GetIsActive() bool {
 	return f.IsActive
 }
-func (f Hierarchy) getIsActive() bool {
+func (f Hierarchy) GetIsActive() bool {
 	return f.IsActive
 }
 

@@ -5,6 +5,7 @@ import (
 	"fias_to_sql/internal/config"
 	"fias_to_sql/internal/services/disk"
 	"fias_to_sql/internal/services/fias"
+	"fias_to_sql/internal/services/terminal"
 	"fias_to_sql/migrations"
 	"fias_to_sql/pkg/db"
 )
@@ -42,7 +43,12 @@ func App() error {
 		return err
 	}
 
-	err = fias.ImportXml(path)
+	importDestination := terminal.InputPrompt("input import destination (json/db): ")
+	if importDestination != "json" &&
+		importDestination != "db" {
+		return errors.New("incorrect import destination choose")
+	}
+	err = fias.ImportXml(path, importDestination)
 	if err != nil {
 		return err
 	}

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fias_to_sql/internal/config"
+	"fias_to_sql/internal/models"
 	"fias_to_sql/internal/services/download"
 	"fias_to_sql/internal/services/fias/types"
 	"fias_to_sql/internal/services/terminal"
@@ -93,15 +94,15 @@ func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 
 	for _, file := range zf.File {
 		var objectType string
-		if strings.Contains(file.Name, config.GetConfig("HOUSES_FILE_PART")) {
-			objectType = "house"
-		}
+		//if strings.Contains(file.Name, config.GetConfig("HOUSES_FILE_PART")) {
+		//	objectType = "house"
+		//}
 		if strings.Contains(file.Name, config.GetConfig("OBJECT_FILE_PART")) {
 			objectType = "object"
 		}
-		if strings.Contains(file.Name, config.GetConfig("HIERARCHY_FILE_PART")) {
-			objectType = "hierarchy"
-		}
+		//if strings.Contains(file.Name, config.GetConfig("HIERARCHY_FILE_PART")) {
+		//	objectType = "hierarchy"
+		//}
 		if objectType == "" {
 			continue
 		}
@@ -149,7 +150,7 @@ func ImportXml(
 	archivePath string,
 	importDestinationStr ...string,
 ) error {
-	importDestination := "json"
+	importDestination := "db"
 	if len(importDestinationStr) > 0 {
 		importDestination = importDestinationStr[0]
 	}
@@ -161,7 +162,7 @@ func ImportXml(
 	defer zf.Close()
 
 	files := getSortedXmlFiles(zf)
-	mutexChanObjects := make(chan struct{}, 6)
+	mutexChanObjects := make(chan struct{}, 10)
 	g, ctx := errgroup.WithContext(context.Background())
 	for _, file := range files {
 		var objectType string
@@ -241,6 +242,37 @@ func ImportXml(
 }
 
 func importToDb(list *types.FiasObjectList) error {
+	for _, item := range list.Addresses {
+		var err error
+		switch fiasObj := item.(type) {
+		case *types.Address:
+			model := models.NewObject()
+			model.SetName(fiasObj.Name)
+			model.SetObject_id(fiasObj.ObjectId)
+			model.SetObject_guid(fiasObj.ObjectGuid)
+			model.SetLevel(fiasObj.Level)
+			model.SetType_name(fiasObj.TypeName)
+			err = model.Save()
+		case *types.House:
+			model := models.NewObject()
+			model.SetName(fiasObj.HouseNum)
+			model.SetObject_id(fiasObj.ObjectId)
+			model.SetObject_guid(fiasObj.ObjectGuid)
+			model.SetLevel(12)
+			model.SetType_name("дом")
+			model.SetAdd_name(fiasObj.AddNum)
+			model.SetAdd_name2(fiasObj.AddNum2)
+			err = model.Save()
+		case *types.Hierarchy:
+			model := models.NewHierarchy()
+			model.SetObject_id(fiasObj.ObjectId)
+			model.SetParent_object_id(fiasObj.ParentObjId)
+			err = model.Save()
+		}
+		if err != nil {
+			return err
+		}
+	}
 	list.Clear()
 	return nil
 }
