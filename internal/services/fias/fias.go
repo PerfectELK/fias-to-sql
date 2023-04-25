@@ -85,6 +85,66 @@ func GetArchivePath() (string, error) {
 	return pwd, nil
 }
 
+func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
+	filesMap := make(map[string][]*zip.File)
+	filesMap["object"] = make([]*zip.File, 0)
+	filesMap["house"] = make([]*zip.File, 0)
+	filesMap["hierarchy"] = make([]*zip.File, 0)
+
+	for _, file := range zf.File {
+		var objectType string
+		if strings.Contains(file.Name, config.GetConfig("HOUSES_FILE_PART")) {
+			objectType = "house"
+		}
+		if strings.Contains(file.Name, config.GetConfig("OBJECT_FILE_PART")) {
+			objectType = "object"
+		}
+		if strings.Contains(file.Name, config.GetConfig("HIERARCHY_FILE_PART")) {
+			objectType = "hierarchy"
+		}
+		if objectType == "" {
+			continue
+		}
+		if strings.Contains(file.Name, "_PARAMS_") {
+			continue
+		}
+		if strings.Contains(file.Name, "_DIVISION_") {
+			continue
+		}
+		if strings.Contains(file.Name, "_OBJ_TYPES_") {
+			continue
+		}
+		filesMap[objectType] = append(filesMap[objectType], file)
+	}
+
+	var sortedFiles []*zip.File
+	for i := 0; ; i++ {
+		endFilesCounter := 0
+		if len(filesMap["object"]) > i {
+			sortedFiles = append(sortedFiles, filesMap["object"][i])
+		} else {
+			endFilesCounter++
+		}
+
+		if len(filesMap["house"]) > i {
+			sortedFiles = append(sortedFiles, filesMap["house"][i])
+		} else {
+			endFilesCounter++
+		}
+
+		if len(filesMap["hierarchy"]) > i {
+			sortedFiles = append(sortedFiles, filesMap["hierarchy"][i])
+		} else {
+			endFilesCounter++
+		}
+
+		if endFilesCounter == 3 {
+			break
+		}
+	}
+	return sortedFiles
+}
+
 func ImportXml(
 	archivePath string,
 	importDestinationStr ...string,
@@ -100,48 +160,38 @@ func ImportXml(
 	}
 	defer zf.Close()
 
-	mutexChan := make(chan struct{}, 4)
+	files := getSortedXmlFiles(zf)
+	mutexChanObjects := make(chan struct{}, 6)
 	g, ctx := errgroup.WithContext(context.Background())
-	for _, file := range zf.File {
+	for _, file := range files {
 		var objectType string
-
-		if strings.Contains(file.Name, config.GetConfig("OBJECT_FILE_PART")) {
-			objectType = "object"
-		}
 		if strings.Contains(file.Name, config.GetConfig("HOUSES_FILE_PART")) {
 			objectType = "house"
+		}
+		if strings.Contains(file.Name, config.GetConfig("OBJECT_FILE_PART")) {
+			objectType = "object"
 		}
 		if strings.Contains(file.Name, config.GetConfig("HIERARCHY_FILE_PART")) {
 			objectType = "hierarchy"
 		}
 
-		if objectType == "" {
-			continue
-		}
-
-		if strings.Contains(file.Name, "_PARAMS_") {
-			continue
-		}
-		if strings.Contains(file.Name, "_DIVISION_") {
-			continue
-		}
-		if strings.Contains(file.Name, "_OBJ_TYPES_") {
-			continue
-		}
 		_file := file
+		mutexChanObjects <- struct{}{}
 		g.Go(func() error {
 			select {
 			case <-ctx.Done():
+				<-mutexChanObjects
 				return nil
 			default:
-				mutexChan <- struct{}{}
 				c, err := _file.Open()
 				if err != nil {
+					<-mutexChanObjects
 					return err
 				}
 
 				list, err := ProcessingXml(c, objectType)
 				if err != nil {
+					<-mutexChanObjects
 					return err
 				}
 				listLen := len(list.Addresses)
@@ -156,9 +206,10 @@ func ImportXml(
 				}
 
 				if err != nil {
+					<-mutexChanObjects
 					return err
 				}
-				<-mutexChan
+				<-mutexChanObjects
 				fmt.Println(_file.Name, ": records amount (", listLen, ") [OK]")
 				return nil
 			}
@@ -201,28 +252,28 @@ func importToJson(list *types.FiasObjectList) error {
 		switch fiasObj := item.(type) {
 		case *types.Address:
 			addressesFile, _ := os.OpenFile(path.Join(pwd, "/storage/addresses.json"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			defer addressesFile.Close()
 			j, err := json.Marshal(fiasObj)
 			if err != nil {
 				return err
 			}
 			addressesFile.Write(j)
+			addressesFile.Close()
 		case *types.House:
-			housesFile, _ := os.OpenFile(path.Join(pwd, "/storage/houses.json"), os.O_CREATE|os.O_WRONLY, 0644)
-			defer housesFile.Close()
+			housesFile, _ := os.OpenFile(path.Join(pwd, "/storage/houses.json"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			j, err := json.Marshal(fiasObj)
 			if err != nil {
 				return err
 			}
 			housesFile.Write(j)
+			housesFile.Close()
 		case *types.Hierarchy:
-			hierarchyFile, _ := os.OpenFile(path.Join(pwd, "/storage/hierarchy.json"), os.O_CREATE|os.O_WRONLY, 0644)
-			defer hierarchyFile.Close()
+			hierarchyFile, _ := os.OpenFile(path.Join(pwd, "/storage/hierarchy.json"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			j, err := json.Marshal(fiasObj)
 			if err != nil {
 				return err
 			}
 			hierarchyFile.Write(j)
+			hierarchyFile.Close()
 		}
 	}
 	return nil
