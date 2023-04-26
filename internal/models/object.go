@@ -19,7 +19,8 @@ type Object struct {
 }
 
 type ObjectList struct {
-	List []Object
+	ModelList
+	List []Model
 }
 
 func (m *Object) SetObject_id(object_id int64) {
@@ -74,5 +75,42 @@ func (m *Object) Save() error {
 }
 
 func (m *ObjectList) SaveModelList() error {
-	return nil
+	dbInstance, err := db.GetDbInstance()
+	if err != nil {
+		return err
+	}
+
+	keys := []string{
+		"object_id",
+		"object_guid",
+		"type_name",
+		"level",
+		"name",
+		"add_name",
+		"add_name2",
+	}
+	tableName := ""
+	var values [][]string
+	for _, val := range m.List {
+		objVal, _ := val.(*Object)
+		if tableName == "" {
+			tableName = objVal.tableName
+		}
+		vals := []string{
+			strconv.FormatInt(objVal.object_id, 10),
+			objVal.object_guid,
+			objVal.type_name,
+			strconv.FormatInt(objVal.level, 10),
+			objVal.name,
+			objVal.add_name,
+			objVal.add_name2,
+		}
+		values = append(values, vals)
+	}
+
+	return dbInstance.InsertList(tableName, keys, values)
+}
+
+func (m *ObjectList) AppendModel(mod Model) {
+	m.List = append(m.List, mod)
 }

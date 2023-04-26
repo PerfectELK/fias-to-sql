@@ -6,6 +6,7 @@ type Model interface {
 
 type ModelList interface {
 	SaveModelList() error
+	AppendModel(mod Model)
 }
 
 type ModelStruct struct {

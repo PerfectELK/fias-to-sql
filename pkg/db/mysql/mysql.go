@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"fias_to_sql/internal/config"
 	"fias_to_sql/pkg/db/abstract"
+	"fias_to_sql/pkg/db/helpers"
 	_ "github.com/go-sql-driver/mysql"
+	"log"
 )
 
 type Processor struct {
@@ -74,7 +76,35 @@ func (m *Processor) Insert(table string, mm map[string]string) error {
 func (m *Processor) InsertList(table string, keys []string, values [][]string) error {
 	queryStr := "INSERT INTO " + table
 
-	return nil
+	keysStr := ""
+	valuesStr := ""
+	for i, val := range keys {
+		afterStr := ""
+		if i != len(keys)-1 {
+			afterStr += ", "
+		}
+		keysStr += val + afterStr
+	}
+
+	for i, vals := range values {
+		valuesStr += "( "
+		for key, val := range vals {
+			afterStr := ""
+			if key != len(vals)-1 {
+				afterStr += ", "
+			}
+			valuesStr += "\"" + helpers.SqlRealEscapeString(val) + "\"" + afterStr
+		}
+		closeStr := ") "
+		if i != len(values)-1 {
+			closeStr += ", "
+		}
+		valuesStr += closeStr
+	}
+
+	queryStr += " (" + keysStr + ") VALUES " + valuesStr + ";"
+	log.Println(queryStr)
+	return m.Exec(queryStr)
 }
 
 func (m *Processor) IsConnected() bool {

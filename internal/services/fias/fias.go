@@ -162,7 +162,7 @@ func ImportXml(
 	defer zf.Close()
 
 	files := getSortedXmlFiles(zf)
-	mutexChanObjects := make(chan struct{}, 10)
+	mutexChanObjects := make(chan struct{}, 6)
 	g, ctx := errgroup.WithContext(context.Background())
 	for _, file := range files {
 		var objectType string
@@ -242,6 +242,19 @@ func ImportXml(
 }
 
 func importToDb(list *types.FiasObjectList) error {
+	if len(list.Addresses) == 0 {
+		return nil
+	}
+	var modelList models.ModelList
+	switch list.Addresses[0].(type) {
+	case *types.Address:
+		modelList = &models.ObjectList{}
+	case *types.House:
+		modelList = &models.ObjectList{}
+	case *types.Hierarchy:
+		modelList = &models.HierarchyList{}
+	}
+
 	for _, item := range list.Addresses {
 		var err error
 		switch fiasObj := item.(type) {
@@ -252,7 +265,7 @@ func importToDb(list *types.FiasObjectList) error {
 			model.SetObject_guid(fiasObj.ObjectGuid)
 			model.SetLevel(fiasObj.Level)
 			model.SetType_name(fiasObj.TypeName)
-			err = model.Save()
+			modelList.AppendModel(model)
 		case *types.House:
 			model := models.NewObject()
 			model.SetName(fiasObj.HouseNum)
@@ -262,16 +275,20 @@ func importToDb(list *types.FiasObjectList) error {
 			model.SetType_name("дом")
 			model.SetAdd_name(fiasObj.AddNum)
 			model.SetAdd_name2(fiasObj.AddNum2)
-			err = model.Save()
+			modelList.AppendModel(model)
 		case *types.Hierarchy:
 			model := models.NewHierarchy()
 			model.SetObject_id(fiasObj.ObjectId)
 			model.SetParent_object_id(fiasObj.ParentObjId)
-			err = model.Save()
+			modelList.AppendModel(model)
 		}
 		if err != nil {
 			return err
 		}
+	}
+	err := modelList.SaveModelList()
+	if err != nil {
+		return err
 	}
 	list.Clear()
 	return nil
