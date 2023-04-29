@@ -11,6 +11,8 @@ func InitConfig() error {
 	err := godotenv.Load(".env")
 
 	configMap = make(map[string]string)
+
+	appConfig(configMap)
 	dbConfig(configMap)
 	fiasConfig(configMap)
 
