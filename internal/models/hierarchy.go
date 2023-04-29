@@ -8,9 +8,9 @@ import (
 type Hierarchy struct {
 	Model
 	ModelStruct
-	id               int64
-	object_id        int64
-	parent_object_id int64
+	id               int64 `sql:"id,int"`
+	object_id        int64 `sql:"object_id,int"`
+	parent_object_id int64 `sql:"parent_object_id,int"`
 }
 
 func (h *Hierarchy) SetId(id int64) {
