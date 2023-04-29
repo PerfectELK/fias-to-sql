@@ -13,7 +13,7 @@ type Model interface {
 }
 
 type ModelList interface {
-	SaveModelList(list *ModelListStruct) error
+	SaveModelList() error
 	AppendModel(mod Model)
 }
 
@@ -30,17 +30,18 @@ type ModelStruct struct {
 	TableName string
 }
 
-func (r *ModelListStruct) SaveModelList(list *ModelListStruct) error {
+func (r *ModelListStruct) SaveModelList() error {
+	list := r.List
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
 	}
 	var keys []types.Key
-	if len(list.List) == 0 {
+	if len(list) == 0 {
 		return nil
 	}
-	ir := reflect.TypeOf(list.List[0])
-	numFields := reflect.ValueOf(list.List[0]).Elem().NumField()
+	ir := reflect.TypeOf(list[0])
+	numFields := reflect.ValueOf(list[0]).Elem().NumField()
 	for i := 0; i < numFields; i++ {
 		tag := ir.Elem().Field(i).Tag.Get("sql")
 		if tag == "" {
@@ -57,7 +58,7 @@ func (r *ModelListStruct) SaveModelList(list *ModelListStruct) error {
 	}
 
 	var values [][]string
-	for _, item := range list.List {
+	for _, item := range list {
 		r := reflect.ValueOf(item)
 		var value []string
 		for _, key := range keys {
@@ -72,6 +73,6 @@ func (r *ModelListStruct) SaveModelList(list *ModelListStruct) error {
 		values = append(values, value)
 	}
 
-	tableName := reflect.Indirect(reflect.ValueOf(list.List[0])).FieldByName("TableName").String()
+	tableName := reflect.Indirect(reflect.ValueOf(list[0])).FieldByName("TableName").String()
 	return dbInstance.InsertList(tableName, keys, values)
 }
