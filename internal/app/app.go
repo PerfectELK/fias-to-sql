@@ -10,6 +10,7 @@ import (
 	"fias_to_sql/migrations"
 	"fias_to_sql/pkg/db"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -46,7 +47,7 @@ func App() error {
 		return handler.ErrorHandler(err)
 	}
 
-	importDestination := terminal.InputPrompt("input import destination (json/db): ")
+	importDestination := strings.ToLower(terminal.InputPrompt("input import destination (json/db): "))
 	if importDestination != "json" &&
 		importDestination != "db" {
 		return errors.New("incorrect import destination choose")

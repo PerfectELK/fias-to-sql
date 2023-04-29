@@ -19,8 +19,6 @@ type House struct {
 	ObjectId   int64  `xml:"OBJECTID,attr"`
 	ObjectGuid string `xml:"OBJECTGUID,attr"`
 	HouseNum   string `xml:"HOUSENUM,attr"`
-	AddNum     string `xml:"ADDNUM,attr"`
-	AddNum2    string `xml:"ADDNUM2,attr"`
 	IsActive   bool   `xml:"ISACTIVE,attr"`
 }
 

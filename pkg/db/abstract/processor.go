@@ -1,6 +1,9 @@
 package abstract
 
-import "database/sql"
+import (
+	"database/sql"
+	"fias_to_sql/pkg/db/types"
+)
 
 type DbProcessor interface {
 	Connect(...string) error
@@ -8,7 +11,7 @@ type DbProcessor interface {
 	Use(q string) error
 	Exec(q string) error
 	Insert(table string, m map[string]string) error
-	InsertList(table string, keys []string, values [][]string) error
+	InsertList(table string, keys []types.Key, values [][]string) error
 	Table(t string) DbProcessor
 	Select(s []string) DbProcessor
 	Where(q [][]string) DbProcessor

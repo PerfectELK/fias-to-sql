@@ -245,15 +245,7 @@ func importToDb(list *types.FiasObjectList) error {
 	if len(list.Addresses) == 0 {
 		return nil
 	}
-	var modelList models.ModelList
-	switch list.Addresses[0].(type) {
-	case *types.Address:
-		modelList = &models.ObjectList{}
-	case *types.House:
-		modelList = &models.ObjectList{}
-	case *types.Hierarchy:
-		modelList = &models.HierarchyList{}
-	}
+	var modelList models.ModelListStruct
 
 	for _, item := range list.Addresses {
 		var err error
@@ -273,8 +265,6 @@ func importToDb(list *types.FiasObjectList) error {
 			model.SetObject_guid(fiasObj.ObjectGuid)
 			model.SetLevel(12)
 			model.SetType_name("дом")
-			model.SetAdd_name(fiasObj.AddNum)
-			model.SetAdd_name2(fiasObj.AddNum2)
 			modelList.AppendModel(model)
 		case *types.Hierarchy:
 			model := models.NewHierarchy()

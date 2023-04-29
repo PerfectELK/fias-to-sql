@@ -5,6 +5,7 @@ import (
 	"fias_to_sql/internal/config"
 	"fias_to_sql/pkg/db/abstract"
 	"fias_to_sql/pkg/db/helpers"
+	"fias_to_sql/pkg/db/types"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -73,7 +74,7 @@ func (m *Processor) Insert(table string, mm map[string]string) error {
 	return m.Exec(queryStr)
 }
 
-func (m *Processor) InsertList(table string, keys []string, values [][]string) error {
+func (m *Processor) InsertList(table string, keys []types.Key, values [][]string) error {
 	queryStr := "INSERT INTO " + table
 
 	keysStr := ""
@@ -83,7 +84,7 @@ func (m *Processor) InsertList(table string, keys []string, values [][]string) e
 		if i != len(keys)-1 {
 			afterStr += ", "
 		}
-		keysStr += val + afterStr
+		keysStr += val.Name + afterStr
 	}
 	queryStr += " (" + keysStr + ") "
 
