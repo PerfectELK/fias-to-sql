@@ -5,8 +5,8 @@ import (
 	"fias_to_sql/internal/config"
 	"fias_to_sql/pkg/db/abstract"
 	"fias_to_sql/pkg/db/helpers"
+	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	"log"
 )
 
 type Processor struct {
@@ -85,8 +85,11 @@ func (m *Processor) InsertList(table string, keys []string, values [][]string) e
 		}
 		keysStr += val + afterStr
 	}
+	queryStr += " (" + keysStr + ") "
 
+	queryCount := 0
 	for i, vals := range values {
+		queryCount++
 		valuesStr += "( "
 		for key, val := range vals {
 			afterStr := ""
@@ -96,15 +99,26 @@ func (m *Processor) InsertList(table string, keys []string, values [][]string) e
 			valuesStr += "\"" + helpers.SqlRealEscapeString(val) + "\"" + afterStr
 		}
 		closeStr := ") "
-		if i != len(values)-1 {
+		if i != len(values)-1 && queryCount < 4000 {
 			closeStr += ", "
 		}
 		valuesStr += closeStr
+		if queryCount >= 4000 {
+			q := queryStr + "VALUES " + valuesStr + ";"
+			err := m.Exec(q)
+			valuesStr = ""
+			if err != nil {
+				fmt.Println(q)
+				return err
+			}
+			queryCount = 0
+		}
 	}
 
-	queryStr += " (" + keysStr + ") VALUES " + valuesStr + ";"
-	log.Println(queryStr)
-	return m.Exec(queryStr)
+	if valuesStr != "" {
+		return m.Exec(queryStr + "VALUES " + valuesStr + ";")
+	}
+	return nil
 }
 
 func (m *Processor) IsConnected() bool {

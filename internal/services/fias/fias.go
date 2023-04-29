@@ -94,15 +94,15 @@ func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 
 	for _, file := range zf.File {
 		var objectType string
-		//if strings.Contains(file.Name, config.GetConfig("HOUSES_FILE_PART")) {
-		//	objectType = "house"
-		//}
+		if strings.Contains(file.Name, config.GetConfig("HOUSES_FILE_PART")) {
+			objectType = "house"
+		}
 		if strings.Contains(file.Name, config.GetConfig("OBJECT_FILE_PART")) {
 			objectType = "object"
 		}
-		//if strings.Contains(file.Name, config.GetConfig("HIERARCHY_FILE_PART")) {
-		//	objectType = "hierarchy"
-		//}
+		if strings.Contains(file.Name, config.GetConfig("HIERARCHY_FILE_PART")) {
+			objectType = "hierarchy"
+		}
 		if objectType == "" {
 			continue
 		}
@@ -162,7 +162,7 @@ func ImportXml(
 	defer zf.Close()
 
 	files := getSortedXmlFiles(zf)
-	mutexChanObjects := make(chan struct{}, 6)
+	mutexChan := make(chan struct{}, 6)
 	g, ctx := errgroup.WithContext(context.Background())
 	for _, file := range files {
 		var objectType string
@@ -177,22 +177,22 @@ func ImportXml(
 		}
 
 		_file := file
-		mutexChanObjects <- struct{}{}
+		mutexChan <- struct{}{}
 		g.Go(func() error {
 			select {
 			case <-ctx.Done():
-				<-mutexChanObjects
+				<-mutexChan
 				return nil
 			default:
 				c, err := _file.Open()
 				if err != nil {
-					<-mutexChanObjects
+					<-mutexChan
 					return err
 				}
 
 				list, err := ProcessingXml(c, objectType)
 				if err != nil {
-					<-mutexChanObjects
+					<-mutexChan
 					return err
 				}
 				listLen := len(list.Addresses)
@@ -207,10 +207,10 @@ func ImportXml(
 				}
 
 				if err != nil {
-					<-mutexChanObjects
+					<-mutexChan
 					return err
 				}
-				<-mutexChanObjects
+				<-mutexChan
 				fmt.Println(_file.Name, ": records amount (", listLen, ") [OK]")
 				return nil
 			}
