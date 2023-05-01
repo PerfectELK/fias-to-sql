@@ -10,12 +10,16 @@ import (
 	"fias_to_sql/migrations"
 	"fias_to_sql/pkg/db"
 	"log"
-	"strings"
 	"time"
 )
 
 func App() error {
 	err := config.InitConfig()
+	if err != nil {
+		return handler.ErrorHandler(err)
+	}
+
+	err = terminal.ParseArgs()
 	if err != nil {
 		return handler.ErrorHandler(err)
 	}
@@ -47,12 +51,11 @@ func App() error {
 		return handler.ErrorHandler(err)
 	}
 
-	importDestination := strings.ToLower(terminal.InputPrompt("input import destination (json/db): "))
-	if importDestination != "json" &&
-		importDestination != "db" {
-		return errors.New("incorrect import destination choose")
-	}
 	beginTime := time.Now()
+	importDestination, err := fias.GetImportDestination()
+	if err != nil {
+		return handler.ErrorHandler(err)
+	}
 	err = fias.ImportXml(path, importDestination)
 	if err != nil {
 		return handler.ErrorHandler(err)

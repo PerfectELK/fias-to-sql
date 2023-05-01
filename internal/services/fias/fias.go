@@ -146,6 +146,18 @@ func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 	return sortedFiles
 }
 
+func GetImportDestination() (string, error) {
+	importDestination := config.GetConfig("IMPORT_DESTINATION")
+	if importDestination == "" {
+		importDestination = strings.ToLower(terminal.InputPrompt("input import destination (json/db): "))
+	}
+	if importDestination != "json" &&
+		importDestination != "db" {
+		return "", errors.New("incorrect import destination choose")
+	}
+	return importDestination, nil
+}
+
 func ImportXml(
 	archivePath string,
 	importDestinationStr ...string,
