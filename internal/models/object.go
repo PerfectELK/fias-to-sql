@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fias_to_sql/internal/config"
 	"fias_to_sql/pkg/db"
 	"strconv"
 )
@@ -38,7 +39,7 @@ func (m *Object) SetName(name string) {
 
 func NewObject() *Object {
 	object := Object{}
-	object.TableName = "fias_objects"
+	object.TableName = config.GetConfig("DB_OBJECTS_TABLE")
 	return &object
 }
 

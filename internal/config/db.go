@@ -9,4 +9,5 @@ func dbConfig(m map[string]string) {
 	m["DB_PASSWORD"] = ""
 	m["DB_OBJECTS_TABLE"] = "fias_objects"
 	m["DB_OBJECTS_HIERARCHY_TABLE"] = "fias_objects_hierarchy"
+	m["DB_USE_TEMP_TABLE"] = "false"
 }

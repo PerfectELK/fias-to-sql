@@ -1,30 +1,10 @@
 package migrations
 
 import (
+	"errors"
 	"fias_to_sql/internal/config"
 	"fias_to_sql/pkg/db"
 )
-
-func createTempTables() error {
-	fiasTableName := config.GetConfig("DB_OBJECTS_TABLE") + "_temp"
-	fiasHierarchyTableName := config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE") + "_temp"
-	dbDriver := config.GetConfig("DB_DRIVER")
-
-	switch dbDriver {
-	case "MYSQL":
-		err := mysqlObjectsTableCreate(fiasTableName)
-		if err != nil {
-			return err
-		}
-
-		return mysqlHierarchyTableCreate(fiasHierarchyTableName)
-	case "PGSQL":
-		//Todo PGSQL db driver
-		return nil
-	default:
-		return nil
-	}
-}
 
 func CreateTables() error {
 	dbInstance, err := db.GetDbInstance()
@@ -33,6 +13,7 @@ func CreateTables() error {
 	}
 
 	dbName := config.GetConfig("DB_NAME")
+	dbDriver := config.GetConfig("DB_DRIVER")
 	err = dbInstance.Use(dbName)
 	if err != nil {
 		return err
@@ -41,16 +22,31 @@ func CreateTables() error {
 	fiasTableName := config.GetConfig("DB_OBJECTS_TABLE")
 	fiasHierarchyTableName := config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE")
 
-	_, tableCheck := dbInstance.Query("select * from " + fiasTableName + " ;")
+	_, tableCheck := dbInstance.Query("select * from " + fiasTableName + " LIMIT 1;")
 	if tableCheck == nil {
-		return createTempTables()
+		fiasTableName = config.GetConfig("DB_OBJECTS_TABLE") + "_temp"
+		fiasHierarchyTableName = config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE") + "_temp"
+		_, tempTableCheck := dbInstance.Query("select * from " + fiasTableName + " LIMIT 1;")
+		if tempTableCheck == nil {
+			return errors.New("fias tables and temp tables is exists")
+		}
+		config.SetConfig("DB_OBJECTS_TABLE", fiasTableName)
+		config.SetConfig("DB_OBJECTS_HIERARCHY_TABLE", fiasHierarchyTableName)
+		config.SetConfig("DB_USE_TEMP_TABLE", "true")
+
+		return createFiasTables(dbDriver, fiasTableName, fiasHierarchyTableName)
 	}
+	return createFiasTables(dbDriver, fiasTableName, fiasHierarchyTableName)
+}
 
-	dbDriver := config.GetConfig("DB_DRIVER")
-
+func createFiasTables(
+	dbDriver string,
+	fiasTableName string,
+	fiasHierarchyTableName string,
+) error {
 	switch dbDriver {
 	case "MYSQL":
-		err = mysqlObjectsTableCreate(fiasTableName)
+		err := mysqlObjectsTableCreate(fiasTableName)
 		if err != nil {
 			return err
 		}

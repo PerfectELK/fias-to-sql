@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fias_to_sql/internal/config"
 	"fias_to_sql/pkg/db"
 	"strconv"
 )
@@ -27,7 +28,7 @@ func (h *Hierarchy) SetParent_object_id(parent_object_id int64) {
 
 func NewHierarchy() *Hierarchy {
 	object := Hierarchy{}
-	object.TableName = "fias_objects_hierarchy"
+	object.TableName = config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE")
 	return &object
 }
 

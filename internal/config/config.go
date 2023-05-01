@@ -30,3 +30,7 @@ func GetConfig(key string) string {
 	}
 	return val
 }
+
+func SetConfig(key string, value string) {
+	configMap[key] = value
+}
