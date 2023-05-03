@@ -24,6 +24,7 @@ func (m *Processor) Connect(dbName ...string) error {
 	if len(dbName) > 0 {
 		connectStr += dbName[0]
 	}
+	connectStr += "?multiStatements=true"
 	db, err := sql.Open("mysql", connectStr)
 	if err != nil {
 		return err
@@ -109,7 +110,7 @@ func (m *Processor) InsertList(table string, keys []types.Key, values [][]string
 			err := m.Exec(q)
 			valuesStr = ""
 			if err != nil {
-				fmt.Println(q)
+				fmt.Println(err)
 				return err
 			}
 			queryCount = 0

@@ -10,6 +10,7 @@ import (
 	"fias_to_sql/internal/models"
 	"fias_to_sql/internal/services/download"
 	"fias_to_sql/internal/services/fias/types"
+	"fias_to_sql/internal/services/logger"
 	"fias_to_sql/internal/services/terminal"
 	"fmt"
 	"github.com/go-rod/rod"
@@ -224,7 +225,7 @@ func ImportXml(
 					return err
 				}
 				<-mutexChan
-				fmt.Println(_file.Name, ": records amount (", listLen, ") [OK]")
+				logger.Println(_file.Name, ": records amount (", listLen, ") [OK]")
 				return nil
 			}
 		})

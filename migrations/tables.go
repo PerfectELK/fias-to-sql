@@ -24,6 +24,8 @@ func CreateTables() error {
 
 	_, tableCheck := dbInstance.Query("select * from " + fiasTableName + " LIMIT 1;")
 	if tableCheck == nil {
+		config.SetConfig("DB_ORIGINAL_OBJECTS_TABLE", config.GetConfig("DB_OBJECTS_TABLE"))
+		config.SetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE", config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE"))
 		fiasTableName = config.GetConfig("DB_OBJECTS_TABLE") + "_temp"
 		fiasHierarchyTableName = config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE") + "_temp"
 		_, tempTableCheck := dbInstance.Query("select * from " + fiasTableName + " LIMIT 1;")
@@ -33,10 +35,36 @@ func CreateTables() error {
 		config.SetConfig("DB_OBJECTS_TABLE", fiasTableName)
 		config.SetConfig("DB_OBJECTS_HIERARCHY_TABLE", fiasHierarchyTableName)
 		config.SetConfig("DB_USE_TEMP_TABLE", "true")
-
 		return createFiasTables(dbDriver, fiasTableName, fiasHierarchyTableName)
 	}
 	return createFiasTables(dbDriver, fiasTableName, fiasHierarchyTableName)
+}
+
+func MigrateDataFromTempTables() error {
+	if config.GetConfig("DB_USE_TEMP_TABLE") != "true" {
+		return nil
+	}
+
+	dbInstance, err := db.GetDbInstance()
+	if err != nil {
+		return err
+	}
+
+	originalObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE")
+	originalHierarchyObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE")
+
+	tempObjectsTable := config.GetConfig("DB_OBJECTS_TABLE")
+	tempHierarchyObjectsTable := config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE")
+
+	dbInstance.Exec("DROP TABLE IF EXISTS " + originalObjectsTable + ";")
+	dbInstance.Exec("DROP TABLE IF EXISTS " + originalHierarchyObjectsTable + ";")
+
+	err = dbInstance.Exec("RENAME TABLE " + tempObjectsTable + " TO " + originalObjectsTable + ";")
+	if err != nil {
+		return err
+	}
+	err = dbInstance.Exec("RENAME TABLE " + tempHierarchyObjectsTable + " TO " + originalHierarchyObjectsTable + ";")
+	return err
 }
 
 func createFiasTables(
@@ -65,17 +93,21 @@ func mysqlObjectsTableCreate(fiasTableName string) error {
 	if err != nil {
 		return err
 	}
-	return dbInstance.Exec("CREATE TABLE " + fiasTableName + " (" +
+	err = dbInstance.Exec("CREATE TABLE " + fiasTableName + " (" +
 		"`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
 		"`object_id` INT DEFAULT NULL," +
 		"`object_guid` VARCHAR(100) DEFAULT NULL," +
 		"`type_name` VARCHAR(100) DEFAULT NULL," +
 		"`level` INT DEFAULT NULL," +
-		"`name` VARCHAR(255) DEFAULT NULL) ENGINE=InnoDB;" +
-		"create index " + fiasTableName + "_name_index on " + fiasTableName + " (name);" +
-		"create index " + fiasTableName + "_object_guid_index on " + fiasTableName + " (object_guid);" +
-		"create index " + fiasTableName + "_object_id_index on " + fiasTableName + " (object_id);" +
-		"create index " + fiasTableName + "_type_name_index on " + fiasTableName + " (type_name);",
+		"`name` VARCHAR(255) DEFAULT NULL) ENGINE=InnoDB;",
+	)
+	if err != nil {
+		return err
+	}
+	return dbInstance.Exec("CREATE INDEX " + fiasTableName + "_name_index ON " + fiasTableName + " (name);" +
+		" CREATE INDEX " + fiasTableName + "_object_guid_index ON " + fiasTableName + " (object_guid);" +
+		" CREATE INDEX " + fiasTableName + "_object_id_index ON " + fiasTableName + " (object_id);" +
+		" CREATE INDEX " + fiasTableName + "_type_name_index ON " + fiasTableName + " (type_name);",
 	)
 }
 
@@ -84,11 +116,16 @@ func mysqlHierarchyTableCreate(fiasHierarchyTableName string) error {
 	if err != nil {
 		return err
 	}
-	return dbInstance.Exec("CREATE TABLE " + fiasHierarchyTableName + " (" +
+	err = dbInstance.Exec("CREATE TABLE " + fiasHierarchyTableName + " (" +
 		"`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
 		"`object_id` INT DEFAULT NULL," +
-		"`parent_object_id` INT DEFAULT NULL) ENGINE=InnoDB;" +
-		"create index " + fiasHierarchyTableName + "_object_id_index on " + fiasHierarchyTableName + " (object_id);" +
-		"create index " + fiasHierarchyTableName + "_parent_object_id_index on " + fiasHierarchyTableName + " (parent_object_id);",
+		"`parent_object_id` INT DEFAULT NULL) ENGINE=InnoDB;",
+	)
+	if err != nil {
+		return err
+	}
+
+	return dbInstance.Exec("CREATE INDEX " + fiasHierarchyTableName + "_object_id_index ON " + fiasHierarchyTableName + " (object_id);" +
+		" CREATE INDEX " + fiasHierarchyTableName + "_parent_object_id_index ON " + fiasHierarchyTableName + " (parent_object_id);",
 	)
 }
