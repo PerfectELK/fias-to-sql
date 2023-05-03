@@ -37,31 +37,38 @@ func App() error {
 		return handler.ErrorHandler(err)
 	}
 
-	_, err = db.GetDbInstance()
-	if err != nil {
-		return handler.ErrorHandler(err)
-	}
-
-	err = migrations.CreateDatabase()
-	if err != nil {
-		return handler.ErrorHandler(err)
-	}
-	err = migrations.CreateTables()
-	if err != nil {
-		return handler.ErrorHandler(err)
-	}
-
 	beginTime := time.Now()
 	importDestination, err := fias.GetImportDestination()
 	if err != nil {
 		return handler.ErrorHandler(err)
 	}
+
+	if importDestination == "db" {
+		_, err = db.GetDbInstance()
+		if err != nil {
+			return handler.ErrorHandler(err)
+		}
+
+		err = migrations.CreateDatabase()
+		if err != nil {
+			return handler.ErrorHandler(err)
+		}
+		err = migrations.CreateTables()
+		if err != nil {
+			return handler.ErrorHandler(err)
+		}
+	}
+
 	err = fias.ImportXml(path, importDestination)
 	if err != nil {
 		return handler.ErrorHandler(err)
 	}
 	endTime := time.Now()
 	log.Println("import time ", float64((endTime.Unix()-beginTime.Unix())/60), " minutes")
+
+	if importDestination == "db" {
+
+	}
 
 	return nil
 }

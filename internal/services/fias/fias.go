@@ -150,6 +150,7 @@ func GetImportDestination() (string, error) {
 	importDestination := config.GetConfig("IMPORT_DESTINATION")
 	if importDestination == "" {
 		importDestination = strings.ToLower(terminal.InputPrompt("input import destination (json/db): "))
+		config.SetConfig("IMPORT_DESTINATION", importDestination)
 	}
 	if importDestination != "json" &&
 		importDestination != "db" {

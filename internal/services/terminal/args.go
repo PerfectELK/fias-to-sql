@@ -29,6 +29,30 @@ func ParseArgs() error {
 	if importDestination != "" {
 		config.SetConfig("IMPORT_DESTINATION", importDestination)
 	}
+	if dbDriver != "" {
+		config.SetConfig("DB_DRIVER", dbDriver)
+	}
+	if dbHost != "" {
+		config.SetConfig("DB_HOST", dbHost)
+	}
+	if dbPort != "" {
+		config.SetConfig("DB_PORT", dbPort)
+	}
+	if dbName != "" {
+		config.SetConfig("DB_NAME", dbName)
+	}
+	if dbUser != "" {
+		config.SetConfig("DB_USER", dbUser)
+	}
+	if dbPassword != "" {
+		config.SetConfig("DB_PASSWORD", dbPassword)
+	}
+	if objectsTableName != "" {
+		config.SetConfig("DB_OBJECTS_TABLE", objectsTableName)
+	}
+	if objectsHierarchyTableName != "" {
+		config.SetConfig("DB_OBJECTS_HIERARCHY_TABLE", objectsHierarchyTableName)
+	}
 
 	return nil
 }
