@@ -95,11 +95,11 @@ func mysqlObjectsTableCreate(fiasTableName string) error {
 	}
 	err = dbInstance.Exec("CREATE TABLE " + fiasTableName + " (" +
 		"`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
-		"`object_id` INT DEFAULT NULL," +
-		"`object_guid` VARCHAR(100) DEFAULT NULL," +
-		"`type_name` VARCHAR(100) DEFAULT NULL," +
-		"`level` INT DEFAULT NULL," +
-		"`name` VARCHAR(255) DEFAULT NULL) ENGINE=InnoDB;",
+		"`object_id` INT NOT NULL DEFAULT 0," +
+		"`object_guid` VARCHAR(100) NOT NULL DEFAULT ''," +
+		"`type_name` VARCHAR(100) NOT NULL DEFAULT ''," +
+		"`level` INT DEFAULT NOT NULL DEFAULT 0," +
+		"`name` VARCHAR(255) NOT NULL DEFAULT '') ENGINE=InnoDB;",
 	)
 	if err != nil {
 		return err
@@ -118,8 +118,8 @@ func mysqlHierarchyTableCreate(fiasHierarchyTableName string) error {
 	}
 	err = dbInstance.Exec("CREATE TABLE " + fiasHierarchyTableName + " (" +
 		"`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
-		"`object_id` INT DEFAULT NULL," +
-		"`parent_object_id` INT DEFAULT NULL) ENGINE=InnoDB;",
+		"`object_id` INT NOT NULL DEFAULT 0," +
+		"`parent_object_id` INT NOT NULL DEFAULT 0) ENGINE=InnoDB;",
 	)
 	if err != nil {
 		return err
