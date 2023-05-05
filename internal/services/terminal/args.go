@@ -15,6 +15,7 @@ func ParseArgs() error {
 	var dbPassword string
 	var objectsTableName string
 	var objectsHierarchyTableName string
+	var threadNumber string
 
 	flag.StringVar(&importDestination, "import-destination", "", "")
 	flag.StringVar(&dbDriver, "db-driver", "", "")
@@ -25,6 +26,7 @@ func ParseArgs() error {
 	flag.StringVar(&dbPassword, "db-password", "", "")
 	flag.StringVar(&objectsTableName, "objects-table", "", "")
 	flag.StringVar(&objectsHierarchyTableName, "objects-hierarchy-table", "", "")
+	flag.StringVar(&threadNumber, "thread-number", "", "")
 
 	if importDestination != "" {
 		config.SetConfig("IMPORT_DESTINATION", importDestination)
@@ -52,6 +54,9 @@ func ParseArgs() error {
 	}
 	if objectsHierarchyTableName != "" {
 		config.SetConfig("DB_OBJECTS_HIERARCHY_TABLE", objectsHierarchyTableName)
+	}
+	if threadNumber != "" {
+		config.SetConfig("APP_THREAD_NUMBER", threadNumber)
 	}
 
 	return nil
