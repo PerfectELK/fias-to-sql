@@ -92,21 +92,23 @@ func mysqlObjectsTableCreate(fiasTableName string) error {
 	if err != nil {
 		return err
 	}
-	err = dbInstance.Exec("CREATE TABLE " + fiasTableName + " (" +
-		"`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
-		"`object_id` INT NOT NULL DEFAULT 0," +
-		"`object_guid` VARCHAR(100) NOT NULL DEFAULT ''," +
-		"`type_name` VARCHAR(100) NOT NULL DEFAULT ''," +
-		"`level` INT DEFAULT NOT NULL DEFAULT 0," +
-		"`name` VARCHAR(255) NOT NULL DEFAULT '') ENGINE=InnoDB;",
+	err = dbInstance.Exec(
+		"CREATE TABLE " + fiasTableName + " (" +
+			"`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
+			"`object_id` INT NOT NULL DEFAULT 0," +
+			"`object_guid` VARCHAR(100) NOT NULL DEFAULT ''," +
+			"`type_name` VARCHAR(100) NOT NULL DEFAULT ''," +
+			"`level` INT DEFAULT NOT NULL DEFAULT 0," +
+			"`name` VARCHAR(255) NOT NULL DEFAULT '') ENGINE=InnoDB;",
 	)
 	if err != nil {
 		return err
 	}
-	return dbInstance.Exec("CREATE INDEX " + fiasTableName + "_name_index ON " + fiasTableName + " (name);" +
-		" CREATE INDEX " + fiasTableName + "_object_guid_index ON " + fiasTableName + " (object_guid);" +
-		" CREATE INDEX " + fiasTableName + "_object_id_index ON " + fiasTableName + " (object_id);" +
-		" CREATE INDEX " + fiasTableName + "_type_name_index ON " + fiasTableName + " (type_name);",
+	return dbInstance.Exec(
+		"CREATE INDEX " + fiasTableName + "_name_index ON " + fiasTableName + " (name);" +
+			" CREATE INDEX " + fiasTableName + "_object_guid_index ON " + fiasTableName + " (object_guid);" +
+			" CREATE INDEX " + fiasTableName + "_object_id_index ON " + fiasTableName + " (object_id);" +
+			" CREATE INDEX " + fiasTableName + "_type_name_index ON " + fiasTableName + " (type_name);",
 	)
 }
 
@@ -115,16 +117,18 @@ func mysqlHierarchyTableCreate(fiasHierarchyTableName string) error {
 	if err != nil {
 		return err
 	}
-	err = dbInstance.Exec("CREATE TABLE " + fiasHierarchyTableName + " (" +
-		"`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
-		"`object_id` INT NOT NULL DEFAULT 0," +
-		"`parent_object_id` INT NOT NULL DEFAULT 0) ENGINE=InnoDB;",
+	err = dbInstance.Exec(
+		"CREATE TABLE " + fiasHierarchyTableName + " (" +
+			"`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
+			"`object_id` INT NOT NULL DEFAULT 0," +
+			"`parent_object_id` INT NOT NULL DEFAULT 0) ENGINE=InnoDB;",
 	)
 	if err != nil {
 		return err
 	}
 
-	return dbInstance.Exec("CREATE INDEX " + fiasHierarchyTableName + "_object_id_index ON " + fiasHierarchyTableName + " (object_id);" +
-		" CREATE INDEX " + fiasHierarchyTableName + "_parent_object_id_index ON " + fiasHierarchyTableName + " (parent_object_id);",
+	return dbInstance.Exec(
+		"CREATE INDEX " + fiasHierarchyTableName + "_object_id_index ON " + fiasHierarchyTableName + " (object_id);" +
+			" CREATE INDEX " + fiasHierarchyTableName + "_parent_object_id_index ON " + fiasHierarchyTableName + " (parent_object_id);",
 	)
 }
