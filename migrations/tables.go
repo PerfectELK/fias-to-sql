@@ -98,7 +98,7 @@ func mysqlObjectsTableCreate(fiasTableName string) error {
 			"`object_id` INT NOT NULL DEFAULT 0," +
 			"`object_guid` VARCHAR(100) NOT NULL DEFAULT ''," +
 			"`type_name` VARCHAR(100) NOT NULL DEFAULT ''," +
-			"`level` INT DEFAULT NOT NULL DEFAULT 0," +
+			"`level` INT NOT NULL DEFAULT 0," +
 			"`name` VARCHAR(255) NOT NULL DEFAULT '') ENGINE=InnoDB;",
 	)
 	if err != nil {
