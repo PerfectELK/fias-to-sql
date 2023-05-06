@@ -6,16 +6,20 @@ import (
 )
 
 func ParseArgs() error {
-	var importDestination string
-	var dbDriver string
-	var dbHost string
-	var dbPort string
-	var dbName string
-	var dbUser string
-	var dbPassword string
-	var objectsTableName string
-	var objectsHierarchyTableName string
-	var threadNumber string
+	var (
+		importDestination         string
+		dbDriver                  string
+		dbHost                    string
+		dbPort                    string
+		dbName                    string
+		dbUser                    string
+		dbPassword                string
+		objectsTableName          string
+		objectsHierarchyTableName string
+		threadNumber              string
+		archivePath               string
+		isNeedDownload            string
+	)
 
 	flag.StringVar(&importDestination, "import-destination", "", "")
 	flag.StringVar(&dbDriver, "db-driver", "", "")
@@ -27,6 +31,8 @@ func ParseArgs() error {
 	flag.StringVar(&objectsTableName, "objects-table", "", "")
 	flag.StringVar(&objectsHierarchyTableName, "objects-hierarchy-table", "", "")
 	flag.StringVar(&threadNumber, "threads", "", "")
+	flag.StringVar(&archivePath, "archive-path", "", "")
+	flag.StringVar(&isNeedDownload, "download", "", "")
 	flag.Parse()
 
 	if importDestination != "" {
@@ -58,6 +64,12 @@ func ParseArgs() error {
 	}
 	if threadNumber != "" {
 		config.SetConfig("APP_THREAD_NUMBER", threadNumber)
+	}
+	if archivePath != "" {
+		config.SetConfig("ARCHIVE_LOCAL_PATH", archivePath)
+	}
+	if isNeedDownload != "" {
+		config.SetConfig("IS_NEED_DOWNLOAD_ARCHIVE", isNeedDownload)
 	}
 
 	return nil

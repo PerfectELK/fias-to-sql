@@ -57,7 +57,7 @@ func ProcessingXml(
 				}
 				al.AddObject(fiasObj)
 				//Todo debug
-				return al, nil
+				//return al, nil
 			}
 		}
 	}

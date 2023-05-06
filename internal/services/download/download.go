@@ -1,6 +1,7 @@
 package download
 
 import (
+	"fias_to_sql/internal/services/disk"
 	"github.com/buger/goterm"
 	"io"
 	"net/http"
@@ -20,8 +21,9 @@ func File(
 	f, _ := os.OpenFile(saveTo, os.O_CREATE|os.O_WRONLY, 0644)
 	defer f.Close()
 
-	buf := make([]byte, 32*1024)
+	buf := make([]byte, disk.MB)
 	var downloaded int64
+	var downloadedForSpeed int64
 	goterm.Clear()
 	tBegin := time.Now()
 	for {
@@ -34,18 +36,26 @@ func File(
 		}
 		if n > 0 {
 			tNow := time.Now()
-			if tNow.Unix()-tBegin.Unix() > 3 || downloaded == 0 {
+			if tNow.Unix()-tBegin.Unix() > 10 || downloaded == 0 {
+				var speed int64
+				if downloadedForSpeed != 0 {
+					speed = (downloadedForSpeed / (tNow.Unix() - tBegin.Unix())) / 1024 / 1024
+					downloadedForSpeed = 0
+				}
+
 				tBegin = tNow
 				go func() {
 					message := "Downloading... " + strconv.FormatFloat(float64(downloaded)/float64(resp.ContentLength)*100, 'f', 6, 64) + "%"
 					goterm.MoveCursor(1, 1)
 					goterm.Println(message)
+					goterm.Println("Speed: " + strconv.FormatInt(speed, 10) + " mb/sec")
 					goterm.Flush()
 				}()
 			}
 
 			f.Write(buf[:n])
 			downloaded += int64(n)
+			downloadedForSpeed += int64(n)
 		}
 	}
 	return nil

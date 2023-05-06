@@ -27,7 +27,6 @@ import (
 func GetLinkOnNewestArchive() (string, error) {
 	browser := rod.New().MustConnect()
 	defer browser.MustClose()
-
 	page := browser.MustPage(config.GetConfig("ARCHIVE_PAGE_LINK"))
 	page.MustWaitLoad()
 
@@ -59,11 +58,7 @@ func GetLinkOnNewestArchive() (string, error) {
 }
 
 func GetArchivePath() (string, error) {
-	//Todo debug
-	return "E:\\Sources\\my_project\\fias_to_sql\\archive.zip", nil
-	isHaveArchive := terminal.YesNoPrompt("do you have fias archive?")
-	if isHaveArchive {
-		archivePath := terminal.InputPrompt("enter full path to archive file")
+	if archivePath := config.GetConfig("ARCHIVE_LOCAL_PATH"); archivePath != "" {
 		if _, err := os.Stat(archivePath); err == nil {
 			return archivePath, nil
 		} else {
@@ -71,19 +66,29 @@ func GetArchivePath() (string, error) {
 		}
 	}
 
-	fmt.Println("start downloading fias archive")
+	if isNeedDownload := config.GetConfig("IS_NEED_DOWNLOAD_ARCHIVE"); isNeedDownload != "true" {
+		if isHaveArchive := terminal.YesNoPrompt("do you have fias archive?"); isHaveArchive {
+			archivePath := terminal.InputPrompt("enter full path to archive file")
+			if _, err := os.Stat(archivePath); err == nil {
+				return archivePath, nil
+			} else {
+				return "", errors.New("fias archive does not exists")
+			}
+		}
+	}
+
+	logger.Println("start downloading fias archive")
 	link, err := GetLinkOnNewestArchive()
 	if err != nil {
 		return "", err
 	}
-
 	pwd, _ := os.Getwd()
 	pwd = path.Join(pwd, "archive.zip")
 	err = download.File(link, pwd)
 	if err != nil {
 		return "", err
 	}
-	fmt.Println("download complete")
+	logger.Println("download complete")
 
 	return pwd, nil
 }

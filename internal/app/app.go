@@ -32,12 +32,12 @@ func App() error {
 	if usageGB.FreeGB < 70 {
 		return errors.New("no space left on device")
 	}
+	logger.Println("init app success")
 
 	path, err := fias.GetArchivePath()
 	if err != nil {
 		return handler.ErrorHandler(err)
 	}
-	logger.Println("init app success")
 
 	importDestination, err := fias.GetImportDestination()
 	if err != nil {
