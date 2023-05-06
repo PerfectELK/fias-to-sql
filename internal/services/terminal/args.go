@@ -26,7 +26,8 @@ func ParseArgs() error {
 	flag.StringVar(&dbPassword, "db-password", "", "")
 	flag.StringVar(&objectsTableName, "objects-table", "", "")
 	flag.StringVar(&objectsHierarchyTableName, "objects-hierarchy-table", "", "")
-	flag.StringVar(&threadNumber, "thread-number", "", "")
+	flag.StringVar(&threadNumber, "threads", "", "")
+	flag.Parse()
 
 	if importDestination != "" {
 		config.SetConfig("IMPORT_DESTINATION", importDestination)

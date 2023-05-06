@@ -19,6 +19,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -176,7 +177,12 @@ func ImportXml(
 	defer zf.Close()
 
 	files := getSortedXmlFiles(zf)
-	mutexChan := make(chan struct{}, 6)
+	threadNumber := 3
+	fmt.Println(config.GetConfig("APP_THREAD_NUMBER"))
+	if tn := config.GetConfig("APP_THREAD_NUMBER"); tn != "" {
+		threadNumber, _ = strconv.Atoi(tn)
+	}
+	mutexChan := make(chan struct{}, threadNumber)
 	g, ctx := errgroup.WithContext(context.Background())
 	for _, file := range files {
 		var objectType string
