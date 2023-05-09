@@ -6,3 +6,5 @@ build/mysql
 build/pgsql
 build/.env
 storage
+main
+main.exe
