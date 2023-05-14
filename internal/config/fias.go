@@ -8,4 +8,5 @@ func fiasConfig(m map[string]string) {
 	m["OBJECT_FILE_PART"] = "AS_ADDR_OBJ"
 	m["HOUSES_FILE_PART"] = "AS_HOUSES_"
 	m["HIERARCHY_FILE_PART"] = "_HIERARCHY_"
+	m["IMPORT_DESTINATION"] = ""
 }

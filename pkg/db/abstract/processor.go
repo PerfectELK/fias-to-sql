@@ -18,4 +18,5 @@ type DbProcessor interface {
 	Get() (map[string]string, error)
 	IsConnected() bool
 	Query(string) (*sql.Rows, error)
+	GetDriverName() string
 }

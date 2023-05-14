@@ -80,8 +80,11 @@ func createFiasTables(
 		}
 		return mysqlHierarchyTableCreate(fiasHierarchyTableName)
 	case "PGSQL":
-		//Todo PGSQL db driver
-		return nil
+		err := mysqlObjectsTableCreate(fiasTableName)
+		if err != nil {
+			return err
+		}
+		return mysqlHierarchyTableCreate(fiasHierarchyTableName)
 	default:
 		return nil
 	}

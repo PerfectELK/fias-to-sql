@@ -39,7 +39,7 @@ func (m *Processor) Disconnect() error {
 	return m.db.Close()
 }
 
-func (m Processor) Exec(q string) error {
+func (m *Processor) Exec(q string) error {
 	rows, err := m.db.Query(q)
 	if err != nil {
 		return err
@@ -154,4 +154,8 @@ func (m *Processor) Use(q string) error {
 
 func (m *Processor) Query(q string) (*sql.Rows, error) {
 	return m.db.Query(q)
+}
+
+func (m *Processor) GetDriverName() string {
+	return "MYSQL"
 }
