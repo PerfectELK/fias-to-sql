@@ -14,7 +14,8 @@ func GetDbInstance() (abstract.DbProcessor, error) {
 		return dbInstance, nil
 	}
 	dbDriver := config.GetConfig("DB_DRIVER")
-	if dbDriver == "MYSQL" {
+	switch dbDriver {
+	case "MYSQL":
 		dbInstance = &mysql.Processor{}
 		if !dbInstance.IsConnected() {
 			err := dbInstance.Connect()
@@ -23,7 +24,8 @@ func GetDbInstance() (abstract.DbProcessor, error) {
 			}
 		}
 		return dbInstance, nil
-
+	case "PGSQL":
+		return nil, errors.New("PGSQL is not exists")
 	}
 
 	return nil, errors.New("doesn't selected db driver (MYSQL or PGSQL)")

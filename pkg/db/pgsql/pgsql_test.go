@@ -6,7 +6,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	err := config.InitConfig()
+	err := config.InitConfig(false)
 	if err != nil {
 		panic(err)
 	}

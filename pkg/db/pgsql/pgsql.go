@@ -20,12 +20,13 @@ type Processor struct {
 }
 
 func (m *Processor) Connect(dbName ...string) error {
-	connectStr := "postgres://" + config.GetConfig("DB_USER") + ":" + config.GetConfig("DB_PASSWORD") + "@" + config.GetConfig("DB_HOST") + ":" + config.GetConfig("DB_PORT") + ")/"
+	connectStr := "postgres://" + config.GetConfig("DB_USER") + ":" + config.GetConfig("DB_PASSWORD") + "@" + config.GetConfig("DB_HOST") + ":" + config.GetConfig("DB_PORT") + "/"
 	if len(dbName) > 0 {
 		connectStr += dbName[0]
 	}
-	connectStr += "?multiStatements=true?sslmode=disable"
+	connectStr += "?sslmode=disable"
 	db, err := sql.Open("postgres", connectStr)
+	err = db.Ping()
 	if err != nil {
 		return err
 	}

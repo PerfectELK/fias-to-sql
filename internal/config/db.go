@@ -2,7 +2,7 @@ package config
 
 func dbConfig(m map[string]string) {
 	m["DB_DRIVER"] = "MYSQL"
-	m["DB_HOST"] = "127.0.01"
+	m["DB_HOST"] = "127.0.0.1"
 	m["DB_PORT"] = "3306"
 	m["DB_NAME"] = "fias"
 	m["DB_USER"] = "root"

@@ -8,8 +8,18 @@ import (
 var configMap map[string]string
 var configMapRedeclaredWithApp map[string]bool
 
-func InitConfig() error {
-	err := godotenv.Load(".env")
+func InitConfig(isLoadEnv ...bool) error {
+	IsLoadEnv := true
+	if len(isLoadEnv) > 0 {
+		IsLoadEnv = isLoadEnv[0]
+	}
+
+	if IsLoadEnv {
+		err := godotenv.Load(".env")
+		if err != nil {
+			return err
+		}
+	}
 
 	configMap = make(map[string]string)
 	configMapRedeclaredWithApp = make(map[string]bool)
@@ -18,7 +28,7 @@ func InitConfig() error {
 	dbConfig(configMap)
 	fiasConfig(configMap)
 
-	return err
+	return nil
 }
 
 func GetConfig(key string) string {
