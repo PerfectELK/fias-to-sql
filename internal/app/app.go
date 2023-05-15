@@ -58,7 +58,7 @@ func App() error {
 		if err != nil {
 			return handler.ErrorHandler(err)
 		}
-		//logger.Println("create db and tables success")
+		logger.Println("create db and tables success")
 	}
 
 	//logger.Println("begin import")
