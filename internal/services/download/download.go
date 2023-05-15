@@ -2,7 +2,7 @@ package download
 
 import (
 	"fias_to_sql/internal/services/disk"
-	"github.com/buger/goterm"
+	"fias_to_sql/internal/services/logger"
 	"io"
 	"net/http"
 	"os"
@@ -24,7 +24,6 @@ func File(
 	buf := make([]byte, disk.MB)
 	var downloaded int64
 	var downloadedForSpeed int64
-	goterm.Clear()
 	tBegin := time.Now()
 	for {
 		n, err := resp.Body.Read(buf)
@@ -46,10 +45,8 @@ func File(
 				tBegin = tNow
 				go func() {
 					message := "Downloading... " + strconv.FormatFloat(float64(downloaded)/float64(resp.ContentLength)*100, 'f', 6, 64) + "%"
-					goterm.MoveCursor(1, 1)
-					goterm.Println(message)
-					goterm.Println("Speed: " + strconv.FormatInt(speed, 10) + " mb/sec")
-					goterm.Flush()
+					logger.Println(message)
+					logger.Println("Speed: " + strconv.FormatInt(speed, 10) + " mb/sec")
 				}()
 			}
 
