@@ -21,7 +21,7 @@ You may use .env file or command line arguments
 
 ```
 -import-destination=<json|db>
--db-driver=<mysql(pgsql later)>
+-db-driver=<mysql|pgsql)>
 -db-host=<127.0.0.1>
 -db-port=<3306>
 -db-name=<fias>
