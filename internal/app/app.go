@@ -10,6 +10,7 @@ import (
 	"fias_to_sql/internal/services/terminal"
 	"fias_to_sql/migrations"
 	"fias_to_sql/pkg/db"
+	"time"
 )
 
 func App() error {
@@ -33,10 +34,10 @@ func App() error {
 	}
 	logger.Println("init app success")
 
-	//path, err := fias.GetArchivePath()
-	//if err != nil {
-	//	return handler.ErrorHandler(err)
-	//}
+	path, err := fias.GetArchivePath()
+	if err != nil {
+		return handler.ErrorHandler(err)
+	}
 
 	importDestination, err := fias.GetImportDestination()
 	if err != nil {
@@ -61,24 +62,24 @@ func App() error {
 		logger.Println("create db and tables success")
 	}
 
-	//logger.Println("begin import")
-	//beginTime := time.Now()
-	//err = fias.ImportXml(path, importDestination)
-	//endTime := time.Now()
-	//if err != nil {
-	//	return handler.ErrorHandler(err)
-	//}
-	//logger.Println("import success")
-	//logger.Println("import time ", float64(endTime.Unix()-beginTime.Unix())/60, " minutes")
-	//
-	//if importDestination == "db" {
-	//	logger.Println("begin migrate data from temp to original tables")
-	//	err = migrations.MigrateDataFromTempTables()
-	//	if err != nil {
-	//		return handler.ErrorHandler(err)
-	//	}
-	//	logger.Println("migration success")
-	//}
+	logger.Println("begin import")
+	beginTime := time.Now()
+	err = fias.ImportXml(path, importDestination)
+	endTime := time.Now()
+	if err != nil {
+		return handler.ErrorHandler(err)
+	}
+	logger.Println("import success")
+	logger.Println("import time ", float64(endTime.Unix()-beginTime.Unix())/60, " minutes")
+
+	if importDestination == "db" {
+		logger.Println("begin migrate data from temp to original tables")
+		err = migrations.MigrateDataFromTempTables()
+		if err != nil {
+			return handler.ErrorHandler(err)
+		}
+		logger.Println("migration success")
+	}
 
 	return nil
 }

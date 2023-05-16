@@ -12,7 +12,6 @@ import (
 	"fias_to_sql/internal/services/fias/types"
 	"fias_to_sql/internal/services/logger"
 	"fias_to_sql/internal/services/terminal"
-	"fmt"
 	"github.com/go-rod/rod"
 	"golang.org/x/sync/errgroup"
 	"io"
@@ -183,7 +182,6 @@ func ImportXml(
 
 	files := getSortedXmlFiles(zf)
 	threadNumber := 3
-	fmt.Println(config.GetConfig("APP_THREAD_NUMBER"))
 	if tn := config.GetConfig("APP_THREAD_NUMBER"); tn != "" {
 		threadNumber, _ = strconv.Atoi(tn)
 	}

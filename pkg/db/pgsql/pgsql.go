@@ -69,7 +69,7 @@ func (m *Processor) Insert(table string, mm map[string]string) error {
 			afterStr += ", "
 		}
 		keysStr += keys[key] + afterStr
-		valuesStr += "\"" + values[key] + "\"" + afterStr
+		valuesStr += "'" + values[key] + "'" + afterStr
 	}
 
 	queryStr += " (" + keysStr + ") VALUES (" + valuesStr + ");"
@@ -99,7 +99,7 @@ func (m *Processor) InsertList(table string, keys []types.Key, values [][]string
 			if key != len(vals)-1 {
 				afterStr += ", "
 			}
-			valuesStr += "\"" + helpers.SqlRealEscapeString(val) + "\"" + afterStr
+			valuesStr += "'" + helpers.SqlRealEscapeString(val) + "'" + afterStr
 		}
 		closeStr := ") "
 		if i != len(values)-1 && queryCount < 4000 {
