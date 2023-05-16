@@ -212,7 +212,7 @@ func ImportXml(
 					<-mutexChan
 					return err
 				}
-
+				//Todo do it as generator yield by parts of 100k items
 				list, err := ProcessingXml(c, objectType)
 				if err != nil {
 					<-mutexChan
