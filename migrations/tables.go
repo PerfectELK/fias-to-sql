@@ -3,6 +3,8 @@ package migrations
 import (
 	"errors"
 	"fias_to_sql/internal/config"
+	"fias_to_sql/migrations/mysql"
+	"fias_to_sql/migrations/pgsql"
 	"fias_to_sql/pkg/db"
 )
 
@@ -21,23 +23,27 @@ func CreateTables() error {
 
 	fiasTableName := config.GetConfig("DB_OBJECTS_TABLE")
 	fiasHierarchyTableName := config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE")
+	fiasKladrTableName := config.GetConfig("DB_OBJECTS_KLADR_TABLE")
 
 	_, tableCheck := dbInstance.Query("select * from " + fiasTableName + " LIMIT 1;")
 	if tableCheck == nil {
 		config.SetConfig("DB_ORIGINAL_OBJECTS_TABLE", config.GetConfig("DB_OBJECTS_TABLE"))
 		config.SetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE", config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE"))
+		config.SetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE", config.GetConfig("DB_OBJECTS_KLADR_TABLE"))
 		fiasTableName = config.GetConfig("DB_OBJECTS_TABLE") + "_temp"
 		fiasHierarchyTableName = config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE") + "_temp"
+		fiasKladrTableName = config.GetConfig("DB_OBJECTS_KLADR_TABLE") + "_temp"
 		_, tempTableCheck := dbInstance.Query("select * from " + fiasTableName + " LIMIT 1;")
 		if tempTableCheck == nil {
 			return errors.New("fias tables and temp tables is exists")
 		}
 		config.SetConfig("DB_OBJECTS_TABLE", fiasTableName)
 		config.SetConfig("DB_OBJECTS_HIERARCHY_TABLE", fiasHierarchyTableName)
+		config.SetConfig("DB_OBJECTS_KLADR_TABLE", fiasKladrTableName)
 		config.SetConfig("DB_USE_TEMP_TABLE", "true")
-		return createFiasTables(dbDriver, fiasTableName, fiasHierarchyTableName)
+		return createFiasTables(dbDriver, fiasTableName, fiasHierarchyTableName, fiasKladrTableName)
 	}
-	return createFiasTables(dbDriver, fiasTableName, fiasHierarchyTableName)
+	return createFiasTables(dbDriver, fiasTableName, fiasHierarchyTableName, fiasKladrTableName)
 }
 
 func MigrateDataFromTempTables() error {
@@ -71,113 +77,30 @@ func createFiasTables(
 	dbDriver string,
 	fiasTableName string,
 	fiasHierarchyTableName string,
+	fiasKladrTableName string,
 ) error {
 	switch dbDriver {
 	case "MYSQL":
-		err := mysqlObjectsTableCreate(fiasTableName)
+		err := mysql.ObjectsTableCreate(fiasTableName)
 		if err != nil {
 			return err
 		}
-		return mysqlHierarchyTableCreate(fiasHierarchyTableName)
+		err = mysql.HierarchyTableCreate(fiasHierarchyTableName)
+		if err != nil {
+			return err
+		}
+		return mysql.KladrTableCreate(fiasKladrTableName)
 	case "PGSQL":
-		err := pgsqlObjectsTableCreate(fiasTableName)
+		err := pgsql.ObjectsTableCreate(fiasTableName)
 		if err != nil {
 			return err
 		}
-		return pgsqlHierarchyTableCreate(fiasHierarchyTableName)
+		err = pgsql.HierarchyTableCreate(fiasHierarchyTableName)
+		if err != nil {
+			return err
+		}
+		return pgsql.KladrTableCreate(fiasKladrTableName)
 	default:
 		return nil
 	}
-}
-
-func mysqlObjectsTableCreate(fiasTableName string) error {
-	dbInstance, err := db.GetDbInstance()
-	if err != nil {
-		return err
-	}
-	err = dbInstance.Exec(
-		"CREATE TABLE " + fiasTableName + " (" +
-			"`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
-			"`object_id` INT NOT NULL DEFAULT 0," +
-			"`object_guid` VARCHAR(100) NOT NULL DEFAULT ''," +
-			"`type_name` VARCHAR(100) NOT NULL DEFAULT ''," +
-			"`level` INT NOT NULL DEFAULT 0," +
-			"`name` VARCHAR(255) NOT NULL DEFAULT '') ENGINE=InnoDB;",
-	)
-	if err != nil {
-		return err
-	}
-	return dbInstance.Exec(
-		"CREATE INDEX " + fiasTableName + "_name_index ON " + fiasTableName + " (name);" +
-			" CREATE INDEX " + fiasTableName + "_object_guid_index ON " + fiasTableName + " (object_guid);" +
-			" CREATE INDEX " + fiasTableName + "_object_id_index ON " + fiasTableName + " (object_id);" +
-			" CREATE INDEX " + fiasTableName + "_type_name_index ON " + fiasTableName + " (type_name);",
-	)
-}
-
-func pgsqlObjectsTableCreate(fiasTableName string) error {
-	dbInstance, err := db.GetDbInstance()
-	if err != nil {
-		return err
-	}
-	err = dbInstance.Exec(
-		"CREATE TABLE " + fiasTableName + " (" +
-			"id BIGSERIAL PRIMARY KEY," +
-			"object_id INTEGER NOT NULL DEFAULT 0," +
-			"object_guid VARCHAR(100) NOT NULL DEFAULT ''," +
-			"type_name VARCHAR(100) NOT NULL DEFAULT ''," +
-			"level INT NOT NULL DEFAULT 0," +
-			"name VARCHAR(255) NOT NULL DEFAULT '');",
-	)
-	if err != nil {
-		return err
-	}
-	return dbInstance.Exec(
-		"CREATE INDEX " + fiasTableName + "_name_index ON " + fiasTableName + " (name);" +
-			" CREATE INDEX " + fiasTableName + "_object_guid_index ON " + fiasTableName + " (object_guid);" +
-			" CREATE INDEX " + fiasTableName + "_object_id_index ON " + fiasTableName + " (object_id);" +
-			" CREATE INDEX " + fiasTableName + "_type_name_index ON " + fiasTableName + " (type_name);",
-	)
-}
-
-func mysqlHierarchyTableCreate(fiasHierarchyTableName string) error {
-	dbInstance, err := db.GetDbInstance()
-	if err != nil {
-		return err
-	}
-	err = dbInstance.Exec(
-		"CREATE TABLE " + fiasHierarchyTableName + " (" +
-			"`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
-			"`object_id` INT NOT NULL DEFAULT 0," +
-			"`parent_object_id` INT NOT NULL DEFAULT 0) ENGINE=InnoDB;",
-	)
-	if err != nil {
-		return err
-	}
-
-	return dbInstance.Exec(
-		"CREATE INDEX " + fiasHierarchyTableName + "_object_id_index ON " + fiasHierarchyTableName + " (object_id);" +
-			" CREATE INDEX " + fiasHierarchyTableName + "_parent_object_id_index ON " + fiasHierarchyTableName + " (parent_object_id);",
-	)
-}
-
-func pgsqlHierarchyTableCreate(fiasHierarchyTableName string) error {
-	dbInstance, err := db.GetDbInstance()
-	if err != nil {
-		return err
-	}
-	err = dbInstance.Exec(
-		"CREATE TABLE " + fiasHierarchyTableName + " (" +
-			"id BIGSERIAL PRIMARY KEY," +
-			"object_id INT NOT NULL DEFAULT 0," +
-			"parent_object_id INT NOT NULL DEFAULT 0);",
-	)
-	if err != nil {
-		return err
-	}
-
-	return dbInstance.Exec(
-		"CREATE INDEX " + fiasHierarchyTableName + "_object_id_index ON " + fiasHierarchyTableName + " (object_id);" +
-			" CREATE INDEX " + fiasHierarchyTableName + "_parent_object_id_index ON " + fiasHierarchyTableName + " (parent_object_id);",
-	)
 }

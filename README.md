@@ -1,6 +1,6 @@
 # import-fias
 
-Import-fias is a golang application for importing fias data into databases (so far only mysql) or json
+Import-fias is a golang application for importing fias data into databases (pgsql/mysql) or json
 
 ## Installation
 

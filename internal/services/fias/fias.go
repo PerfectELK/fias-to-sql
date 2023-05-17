@@ -112,14 +112,14 @@ func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 		if objectType == "" {
 			continue
 		}
-		if strings.Contains(file.Name, "_PARAMS_") {
-			continue
-		}
 		if strings.Contains(file.Name, "_DIVISION_") {
 			continue
 		}
 		if strings.Contains(file.Name, "_OBJ_TYPES_") {
 			continue
+		}
+		if strings.Contains(file.Name, "_PARAMS_") {
+			objectType = "param"
 		}
 		filesMap[objectType] = append(filesMap[objectType], file)
 	}
@@ -145,7 +145,13 @@ func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 			endFilesCounter++
 		}
 
-		if endFilesCounter == 3 {
+		if len(filesMap["param"]) > i {
+			sortedFiles = append(sortedFiles, filesMap["param"][i])
+		} else {
+			endFilesCounter++
+		}
+
+		if endFilesCounter == 4 {
 			break
 		}
 	}
@@ -181,6 +187,7 @@ func ImportXml(
 	defer zf.Close()
 
 	files := getSortedXmlFiles(zf)
+
 	threadNumber := 3
 	if tn := config.GetConfig("APP_THREAD_NUMBER"); tn != "" {
 		threadNumber, _ = strconv.Atoi(tn)
@@ -197,6 +204,9 @@ func ImportXml(
 		}
 		if strings.Contains(file.Name, config.GetConfig("HIERARCHY_FILE_PART")) {
 			objectType = "hierarchy"
+		}
+		if strings.Contains(file.Name, "_PARAMS_") {
+			objectType = "param"
 		}
 
 		_file := file
@@ -293,6 +303,11 @@ func importToDb(list *types.FiasObjectList) error {
 			model := models.NewHierarchy()
 			model.SetObject_id(fiasObj.ObjectId)
 			model.SetParent_object_id(fiasObj.ParentObjId)
+			modelList.AppendModel(model)
+		case *types.Param:
+			model := models.NewParam()
+			model.SetObject_id(fiasObj.ObjectId)
+			model.SetKladr_id(fiasObj.Value)
 			modelList.AppendModel(model)
 		}
 		if err != nil {

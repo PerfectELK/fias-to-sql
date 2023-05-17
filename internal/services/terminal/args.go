@@ -3,6 +3,7 @@ package terminal
 import (
 	"fias_to_sql/internal/config"
 	"flag"
+	"strings"
 )
 
 func ParseArgs() error {
@@ -16,6 +17,7 @@ func ParseArgs() error {
 		dbPassword                string
 		objectsTableName          string
 		objectsHierarchyTableName string
+		objectKladrTableName      string
 		threadNumber              string
 		archivePath               string
 		isNeedDownload            string
@@ -30,6 +32,7 @@ func ParseArgs() error {
 	flag.StringVar(&dbPassword, "db-password", "", "")
 	flag.StringVar(&objectsTableName, "objects-table", "", "")
 	flag.StringVar(&objectsHierarchyTableName, "objects-hierarchy-table", "", "")
+	flag.StringVar(&objectKladrTableName, "object-kladr-table", "", "")
 	flag.StringVar(&threadNumber, "threads", "", "")
 	flag.StringVar(&archivePath, "archive-path", "", "")
 	flag.StringVar(&isNeedDownload, "download", "", "")
@@ -39,7 +42,7 @@ func ParseArgs() error {
 		config.SetConfig("IMPORT_DESTINATION", importDestination)
 	}
 	if dbDriver != "" {
-		config.SetConfig("DB_DRIVER", dbDriver)
+		config.SetConfig("DB_DRIVER", strings.ToUpper(dbDriver))
 	}
 	if dbHost != "" {
 		config.SetConfig("DB_HOST", dbHost)
@@ -61,6 +64,9 @@ func ParseArgs() error {
 	}
 	if objectsHierarchyTableName != "" {
 		config.SetConfig("DB_OBJECTS_HIERARCHY_TABLE", objectsHierarchyTableName)
+	}
+	if objectKladrTableName != "" {
+		config.SetConfig("DB_OBJECTS_KLADR_TABLE", objectKladrTableName)
 	}
 	if threadNumber != "" {
 		config.SetConfig("APP_THREAD_NUMBER", threadNumber)
