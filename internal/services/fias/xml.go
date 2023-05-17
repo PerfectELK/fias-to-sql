@@ -9,13 +9,10 @@ import (
 
 func ProcessingXml(
 	closer io.ReadCloser,
-	object ...string,
-) (*types.FiasObjectList, error) {
+	objectType string,
+	fn func(ol *types.FiasObjectList),
+) (int, error) {
 	defer closer.Close()
-	objectType := "object"
-	if len(object) > 0 {
-		objectType = object[0]
-	}
 
 	var xmlTag string
 	switch objectType {
@@ -31,13 +28,14 @@ func ProcessingXml(
 
 	decoder := xml.NewDecoder(closer)
 	al := new(types.FiasObjectList)
+	var counter int
 	for {
 		token, tokenErr := decoder.Token()
 		if tokenErr != nil {
 			if tokenErr == io.EOF {
 				break
 			}
-			return nil, tokenErr
+			return counter, tokenErr
 		}
 		switch se := token.(type) {
 		case xml.StartElement:
@@ -56,7 +54,7 @@ func ProcessingXml(
 
 				err := decoder.DecodeElement(&fiasObj, &se)
 				if err != nil {
-					return nil, err
+					return 0, err
 				}
 
 				switch fo := fiasObj.(type) {
@@ -65,10 +63,20 @@ func ProcessingXml(
 				case *types.Param:
 					paramProcessing(al, fo)
 				}
+
+				if len(al.List) >= 50000 {
+					fn(al)
+					counter += len(al.List)
+					al.Clear()
+				}
 			}
 		}
 	}
-	return al, nil
+	fn(al)
+	counter += len(al.List)
+	al.Clear()
+
+	return counter, nil
 }
 
 func fieldProcessing(

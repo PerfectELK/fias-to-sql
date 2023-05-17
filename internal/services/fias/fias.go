@@ -222,21 +222,24 @@ func ImportXml(
 					<-mutexChan
 					return err
 				}
-				//Todo do it as generator yield by parts of 100k items
-				list, err := ProcessingXml(c, objectType)
+
+				amount, err := ProcessingXml(
+					c,
+					objectType,
+					func(ol *types.FiasObjectList) {
+						switch importDestination {
+						case "db":
+							err = importToDb(ol)
+						case "json":
+							err = importToJson(ol)
+						default:
+							err = importToDb(ol)
+						}
+					},
+				)
 				if err != nil {
 					<-mutexChan
 					return err
-				}
-				listLen := len(list.List)
-
-				switch importDestination {
-				case "db":
-					err = importToDb(list)
-				case "json":
-					err = importToJson(list)
-				default:
-					err = importToDb(list)
 				}
 
 				if err != nil {
@@ -244,7 +247,7 @@ func ImportXml(
 					return err
 				}
 				<-mutexChan
-				logger.Println(_file.Name, ": records amount (", listLen, ") [OK]")
+				logger.Println(_file.Name, ": records amount (", amount, ") [OK]")
 				return nil
 			}
 		})
@@ -318,7 +321,6 @@ func importToDb(list *types.FiasObjectList) error {
 	if err != nil {
 		return err
 	}
-	list.Clear()
 	return nil
 }
 
