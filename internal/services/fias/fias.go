@@ -228,7 +228,7 @@ func ImportXml(
 					<-mutexChan
 					return err
 				}
-				listLen := len(list.Addresses)
+				listLen := len(list.List)
 
 				switch importDestination {
 				case "db":
@@ -275,12 +275,12 @@ func ImportXml(
 }
 
 func importToDb(list *types.FiasObjectList) error {
-	if len(list.Addresses) == 0 {
+	if len(list.List) == 0 {
 		return nil
 	}
 	var modelList models.ModelListStruct
 
-	for _, item := range list.Addresses {
+	for _, item := range list.List {
 		var err error
 		switch fiasObj := item.(type) {
 		case *types.Address:
@@ -325,7 +325,7 @@ func importToDb(list *types.FiasObjectList) error {
 func importToJson(list *types.FiasObjectList) error {
 	pwd, _ := os.Getwd()
 
-	for _, item := range list.Addresses {
+	for _, item := range list.List {
 		switch fiasObj := item.(type) {
 		case *types.Address:
 			addressesFile, _ := os.OpenFile(path.Join(pwd, "/storage/addresses.json"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)

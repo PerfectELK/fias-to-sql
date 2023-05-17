@@ -50,13 +50,13 @@ func (f Hierarchy) GetIsActive() bool {
 }
 
 type FiasObjectList struct {
-	Addresses []FiasObject
+	List []FiasObject
 }
 
 func (a *FiasObjectList) AddObject(object FiasObject) {
-	a.Addresses = append(a.Addresses, object)
+	a.List = append(a.List, object)
 }
 
 func (a *FiasObjectList) Clear() {
-	a.Addresses = nil
+	a.List = nil
 }
