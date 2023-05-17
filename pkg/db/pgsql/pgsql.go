@@ -99,7 +99,7 @@ func (m *Processor) InsertList(table string, keys []types.Key, values [][]string
 			if key != len(vals)-1 {
 				afterStr += ", "
 			}
-			valuesStr += "'" + helpers.SqlRealEscapeString(val) + "'" + afterStr
+			valuesStr += "'" + helpers.PgsqlRealEscapeString(val) + "'" + afterStr
 		}
 		closeStr := ") "
 		if i != len(values)-1 && queryCount < 4000 {
