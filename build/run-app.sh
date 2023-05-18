@@ -8,4 +8,4 @@ cd $SCRIPT_PATH/
 
 cp ../.env ./.env
 
-docker-compose up
+docker-compose up --build
