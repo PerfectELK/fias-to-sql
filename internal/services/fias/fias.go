@@ -82,7 +82,7 @@ func GetArchivePath() (string, error) {
 		return "", err
 	}
 	pwd, _ := os.Getwd()
-	pwd = path.Join(pwd, "archive.zip")
+	pwd = path.Join(pwd, "storage/archive.zip")
 	err = download.File(link, pwd)
 	if err != nil {
 		return "", err
