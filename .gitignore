@@ -5,6 +5,7 @@ archive.zip.test
 build/mysql
 build/pgsql
 build/.env
+build/docker-compose.yml
 storage
 main
 main.exe
