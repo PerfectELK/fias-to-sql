@@ -4,6 +4,7 @@ archive.zip
 archive.zip.test
 build/mysql
 build/pgsql
+build/app
 build/.env
 build/docker-compose.yml
 storage
