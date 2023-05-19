@@ -5,7 +5,8 @@ services:
         dockerfile: ./build/Dockerfile
         context: ../
       volumes:
-        - ./app:/usr/src/app/storage
+        - ./app/storage:/usr/src/app/storage
+        - ./app/logs:/usr/src/app/logs
     db_mysql:
       image: mysql
       command: "--default-authentication-plugin=mysql_native_password"
