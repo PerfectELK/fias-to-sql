@@ -8,89 +8,16 @@ import (
 	"errors"
 	"fias_to_sql/internal/config"
 	"fias_to_sql/internal/models"
-	"fias_to_sql/internal/services/download"
 	"fias_to_sql/internal/services/fias/types"
 	"fias_to_sql/internal/services/logger"
 	"fias_to_sql/internal/services/terminal"
-	"github.com/go-rod/rod"
 	"golang.org/x/sync/errgroup"
 	"io"
 	"os"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
-
-func GetLinkOnNewestArchive() (string, error) {
-	browser := rod.New().MustConnect()
-	defer browser.MustClose()
-	page := browser.MustPage(config.GetConfig("ARCHIVE_PAGE_LINK"))
-	page.MustWaitLoad()
-
-	links := page.MustElements(config.GetConfig("ARCHIVE_LINK_SELECTOR"))
-	r, err := regexp.Compile(`(\d\d\d\d.\d\d.\d\d)`)
-	if err != nil {
-		return "", err
-	}
-	var highestTime int64
-	var lastLink string
-	for _, link := range links {
-		href := link.MustAttribute("href")
-		if strings.Contains(*href, "delta") {
-			continue
-		}
-		timeStr := r.FindString(*href)
-		linkTime, err := time.Parse("2006.01.02", timeStr)
-		if err != nil {
-			return "", err
-		}
-		if linkTime.Unix() > highestTime {
-			highestTime = linkTime.Unix()
-			lastLink = *href
-		}
-
-	}
-
-	return lastLink, nil
-}
-
-func GetArchivePath() (string, error) {
-	if archivePath := config.GetConfig("ARCHIVE_LOCAL_PATH"); archivePath != "" {
-		if _, err := os.Stat(archivePath); err == nil {
-			return archivePath, nil
-		} else {
-			return "", errors.New("fias archive does not exists")
-		}
-	}
-
-	if isNeedDownload := config.GetConfig("IS_NEED_DOWNLOAD_ARCHIVE"); isNeedDownload != "true" {
-		if isHaveArchive := terminal.YesNoPrompt("do you have fias archive?"); isHaveArchive {
-			archivePath := terminal.InputPrompt("enter full path to archive file")
-			if _, err := os.Stat(archivePath); err == nil {
-				return archivePath, nil
-			} else {
-				return "", errors.New("fias archive does not exists")
-			}
-		}
-	}
-
-	logger.Println("start downloading fias archive")
-	link, err := GetLinkOnNewestArchive()
-	if err != nil {
-		return "", err
-	}
-	pwd, _ := os.Getwd()
-	pwd = path.Join(pwd, "storage/archive.zip")
-	err = download.File(link, pwd)
-	if err != nil {
-		return "", err
-	}
-	logger.Println("download complete")
-
-	return pwd, nil
-}
 
 func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 	filesMap := make(map[string][]*zip.File)
