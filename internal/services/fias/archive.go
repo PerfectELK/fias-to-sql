@@ -21,8 +21,11 @@ func GetLinkOnNewestArchive() (string, *time.Time) {
 	page := browser.MustPage(config.GetConfig("ARCHIVE_PAGE_LINK"))
 	page.MustWaitLoad()
 
+	err := page.WaitElementsMoreThan(config.GetConfig("ARCHIVE_LINK_SELECTOR"), 1)
 	links := page.MustElements(config.GetConfig("ARCHIVE_LINK_SELECTOR"))
-	r, err := regexp.Compile(`(\d\d\d\d.\d\d.\d\d)`)
+
+	timeRegex, err := regexp.Compile(`(\d\d\d\d.\d\d.\d\d)`)
+	weightRegex, err := regexp.Compile(`(\([\d]+ (б|мб)\))`)
 	if err != nil {
 		return "", nil
 	}
@@ -33,7 +36,11 @@ func GetLinkOnNewestArchive() (string, *time.Time) {
 		if strings.Contains(*href, "delta") {
 			continue
 		}
-		timeStr := r.FindString(*href)
+		lowWeight := weightRegex.FindString(link.MustHTML())
+		if lowWeight != "" {
+			continue
+		}
+		timeStr := timeRegex.FindString(*href)
 		linkTime, err := time.Parse("2006.01.02", timeStr)
 		if err != nil {
 			return "", nil
@@ -44,7 +51,6 @@ func GetLinkOnNewestArchive() (string, *time.Time) {
 		}
 
 	}
-
 	return lastLink, &highestTime
 }
 
@@ -83,8 +89,11 @@ func GetArchivePath() (string, error) {
 	if link == "" {
 		return "", errors.New("cannot get link")
 	}
-	if archivePath, isNewest := GetLastLocalArchivePath(*highestTime); isNewest {
-		return archivePath, nil
+
+	if config.GetConfig("IS_NEED_DOWNLOAD_ARCHIVE") != "true" {
+		if archivePath, isNewest := GetLastLocalArchivePath(*highestTime); isNewest {
+			return archivePath, nil
+		}
 	}
 
 	logger.Println("start downloading fias archive")
