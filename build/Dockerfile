@@ -19,5 +19,3 @@ COPY .env ./.env
 COPY test.sh ./test.sh
 
 RUN go build -o app ./cmd/app
-
-CMD ["/usr/src/app/app"]
