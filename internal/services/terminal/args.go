@@ -20,7 +20,7 @@ func ParseArgs() error {
 		objectKladrTableName      string
 		threadNumber              string
 		archivePath               string
-		isNeedDownload            string
+		archiveSource             string
 	)
 
 	flag.StringVar(&importDestination, "import-destination", "", "")
@@ -35,7 +35,7 @@ func ParseArgs() error {
 	flag.StringVar(&objectKladrTableName, "object-kladr-table", "", "")
 	flag.StringVar(&threadNumber, "threads", "", "")
 	flag.StringVar(&archivePath, "archive-path", "", "")
-	flag.StringVar(&isNeedDownload, "download", "", "")
+	flag.StringVar(&archiveSource, "archive-source", "", "")
 	flag.Parse()
 
 	if importDestination != "" {
@@ -74,8 +74,8 @@ func ParseArgs() error {
 	if archivePath != "" {
 		config.SetConfig("ARCHIVE_LOCAL_PATH", archivePath)
 	}
-	if isNeedDownload != "" {
-		config.SetConfig("IS_NEED_DOWNLOAD_ARCHIVE", isNeedDownload)
+	if archiveSource != "" {
+		config.SetConfig("ARCHIVE_SOURCE", archiveSource)
 	}
 
 	return nil

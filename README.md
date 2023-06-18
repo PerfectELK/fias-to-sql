@@ -31,7 +31,7 @@ You may use .env file or command line arguments
 -objects-hierarchy-table=<fias_objects_hierarchy>
 -threads=<1,2,3 my processor 12600K was 40% loaded on 6 threads>
 -archive-path=<if you have fias archive /path/to/fias/archive.zip>
--download=<true if need to download fias archive>
+-archive-source=<local if have atchive in ./storage dir, anything if need to download>
 ```
 
 ### Env

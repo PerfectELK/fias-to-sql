@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-func GetLinkOnNewestArchive() (string, *time.Time) {
+func GetLinkOnNewestArchive() string {
 	browser := rod.New().MustConnect()
 	defer browser.MustClose()
 	page := browser.MustPage(config.GetConfig("ARCHIVE_PAGE_LINK"))
@@ -27,7 +27,7 @@ func GetLinkOnNewestArchive() (string, *time.Time) {
 	timeRegex, err := regexp.Compile(`(\d\d\d\d.\d\d.\d\d)`)
 	weightRegex, err := regexp.Compile(`(\([\d]+ (б|мб)\))`)
 	if err != nil {
-		return "", nil
+		return ""
 	}
 	var highestTime time.Time
 	var lastLink string
@@ -43,7 +43,7 @@ func GetLinkOnNewestArchive() (string, *time.Time) {
 		timeStr := timeRegex.FindString(*href)
 		linkTime, err := time.Parse("2006.01.02", timeStr)
 		if err != nil {
-			return "", nil
+			return ""
 		}
 		if linkTime.Unix() > highestTime.Unix() {
 			highestTime = linkTime
@@ -51,17 +51,17 @@ func GetLinkOnNewestArchive() (string, *time.Time) {
 		}
 
 	}
-	return lastLink, &highestTime
+	return lastLink
 }
 
-func GetLastLocalArchivePath(highestTime time.Time) (string, bool) {
+func GetLastLocalArchivePath() string {
 	entries, err := os.ReadDir(filepath.Join(os.Getenv("APP_ROOT"), "storage"))
 	if err != nil {
-		return "", false
+		return ""
 	}
 
 	lastLocalArchivePath := ""
-	isLastArchive := false
+	var highestTime time.Time
 	for _, entry := range entries {
 		if !strings.Contains(entry.Name(), ".zip") {
 			continue
@@ -75,25 +75,28 @@ func GetLastLocalArchivePath(highestTime time.Time) (string, bool) {
 		}
 		timeMod := info.ModTime()
 		if timeMod.Unix() >= highestTime.Unix() {
+			highestTime = timeMod
 			lastLocalArchivePath = fmt.Sprintf("./storage/%s", entry.Name())
-			isLastArchive = true
-			continue
 		}
 	}
 
-	return lastLocalArchivePath, isLastArchive
+	return lastLocalArchivePath
 }
 
 func GetArchivePath() (string, error) {
-	link, highestTime := GetLinkOnNewestArchive()
-	if link == "" {
-		return "", errors.New("cannot get link")
+	if localPath := config.GetConfig("ARCHIVE_LOCAL_PATH"); localPath != "" {
+		return localPath, nil
 	}
 
-	if config.GetConfig("IS_NEED_DOWNLOAD_ARCHIVE") != "true" {
-		if archivePath, isNewest := GetLastLocalArchivePath(*highestTime); isNewest {
+	if config.GetConfig("ARCHIVE_SOURCE") == "local" {
+		if archivePath := GetLastLocalArchivePath(); archivePath != "" {
 			return archivePath, nil
 		}
+	}
+
+	link := GetLinkOnNewestArchive()
+	if link == "" {
+		return "", errors.New("cannot get link")
 	}
 
 	logger.Println("start downloading fias archive")
