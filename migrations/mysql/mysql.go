@@ -1,6 +1,9 @@
 package mysql
 
-import "fias_to_sql/pkg/db"
+import (
+	"fias_to_sql/internal/config"
+	"fias_to_sql/pkg/db"
+)
 
 func ObjectsTableCreate(tableName string) error {
 	dbInstance, err := db.GetDbInstance()
@@ -67,4 +70,60 @@ func KladrTableCreate(tableName string) error {
 		"CREATE INDEX " + tableName + "_object_id_index ON " + tableName + " (object_id);" +
 			" CREATE INDEX " + tableName + "_kladr_id_index ON " + tableName + " (kladr_id);",
 	)
+}
+
+func MigrateFromTempTables() error {
+	err := dropOldTables()
+	if err != nil {
+		return err
+	}
+	return renameTables()
+}
+
+func dropOldTables() error {
+	dbInstance, err := db.GetDbInstance()
+	if err != nil {
+		return err
+	}
+
+	originalObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE")
+	originalHierarchyObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE")
+	originalFiasKladrTableName := config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE")
+
+	err = dbInstance.Exec("DROP TABLE IF EXISTS " + originalObjectsTable + ";")
+	if err != nil {
+		return err
+	}
+	err = dbInstance.Exec("DROP TABLE IF EXISTS " + originalHierarchyObjectsTable + ";")
+	if err != nil {
+		return err
+	}
+	err = dbInstance.Exec("DROP TABLE IF EXISTS " + originalFiasKladrTableName + ";")
+	return err
+}
+
+func renameTables() error {
+	dbInstance, err := db.GetDbInstance()
+	if err != nil {
+		return err
+	}
+
+	originalObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE")
+	originalHierarchyObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE")
+	originalFiasKladrTableName := config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE")
+
+	tempObjectsTable := config.GetConfig("DB_OBJECTS_TABLE")
+	tempHierarchyObjectsTable := config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE")
+	tempFiasKladrTableName := config.GetConfig("DB_OBJECTS_KLADR_TABLE")
+
+	err = dbInstance.Exec("RENAME TABLE " + tempObjectsTable + " TO " + originalObjectsTable + ";")
+	if err != nil {
+		return err
+	}
+	err = dbInstance.Exec("RENAME TABLE " + tempHierarchyObjectsTable + " TO " + originalHierarchyObjectsTable + ";")
+	if err != nil {
+		return err
+	}
+	err = dbInstance.Exec("RENAME TABLE " + tempFiasKladrTableName + " TO " + originalFiasKladrTableName + ";")
+	return err
 }

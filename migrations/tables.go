@@ -6,7 +6,6 @@ import (
 	"fias_to_sql/migrations/mysql"
 	"fias_to_sql/migrations/pgsql"
 	"fias_to_sql/pkg/db"
-	"fmt"
 )
 
 func CreateTables() error {
@@ -41,99 +40,23 @@ func CreateTables() error {
 		config.SetConfig("DB_OBJECTS_TABLE", fiasTableName)
 		config.SetConfig("DB_OBJECTS_HIERARCHY_TABLE", fiasHierarchyTableName)
 		config.SetConfig("DB_OBJECTS_KLADR_TABLE", fiasKladrTableName)
-		config.SetConfig("DB_USE_TEMP_TABLE", "true")
+		config.SetConfig("DB_TABLE_TYPES_FOR_IMPORT", "temp")
 		return createFiasTables(dbDriver, fiasTableName, fiasHierarchyTableName, fiasKladrTableName)
 	}
 	return createFiasTables(dbDriver, fiasTableName, fiasHierarchyTableName, fiasKladrTableName)
 }
 
 func MigrateDataFromTempTables() error {
-	if config.GetConfig("DB_USE_TEMP_TABLE") != "true" {
+	if config.GetConfig("DB_TABLE_TYPES_FOR_IMPORT") != "temp" {
 		return nil
 	}
 
-	dbInstance, err := db.GetDbInstance()
-	if err != nil {
-		return err
-	}
-
-	originalObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE")
-	originalHierarchyObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE")
-	originalFiasKladrTableName := config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE")
-
-	tempObjectsTable := config.GetConfig("DB_OBJECTS_TABLE")
-	tempHierarchyObjectsTable := config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE")
-	tempFiasKladrTableName := config.GetConfig("DB_OBJECTS_KLADR_TABLE")
-
-	dbInstance.Exec("DROP TABLE IF EXISTS " + originalObjectsTable + ";")
-	dbInstance.Exec("DROP TABLE IF EXISTS " + originalHierarchyObjectsTable + ";")
-	dbInstance.Exec("DROP TABLE IF EXISTS " + originalFiasKladrTableName + ";")
-
 	dbDriver := config.GetConfig("DB_DRIVER")
-
 	switch dbDriver {
 	case "MYSQL":
-		err = dbInstance.Exec("RENAME TABLE " + tempObjectsTable + " TO " + originalObjectsTable + ";")
-		if err != nil {
-			return err
-		}
-		err = dbInstance.Exec("RENAME TABLE " + tempHierarchyObjectsTable + " TO " + originalHierarchyObjectsTable + ";")
-		if err != nil {
-			return err
-		}
-		err = dbInstance.Exec("RENAME TABLE " + tempFiasKladrTableName + " TO " + originalFiasKladrTableName + ";")
-		return err
+		return mysql.MigrateFromTempTables()
 	case "PGSQL":
-		err = dbInstance.Exec(fmt.Sprintf("ALTER TABLE IF EXISTS %s RENAME TO %s", tempObjectsTable, originalObjectsTable))
-		if err != nil {
-			return err
-		}
-		err = dbInstance.Exec(fmt.Sprintf(
-			"ALTER INDEX %s_name_index RENAME TO %s_name_index",
-			tempObjectsTable,
-			originalObjectsTable,
-		))
-		err = dbInstance.Exec(fmt.Sprintf(
-			"ALTER INDEX %s_object_guid_index RENAME TO %s_object_guid_index",
-			tempObjectsTable,
-			originalObjectsTable,
-		))
-		err = dbInstance.Exec(fmt.Sprintf(
-			"ALTER INDEX %s_object_id_index RENAME TO %s_object_id_index",
-			tempObjectsTable,
-			originalObjectsTable,
-		))
-		err = dbInstance.Exec(fmt.Sprintf(
-			"ALTER INDEX %s_type_name_index RENAME TO %s_type_name_index",
-			tempObjectsTable,
-			originalObjectsTable,
-		))
-		err = dbInstance.Exec(fmt.Sprintf("ALTER TABLE IF EXISTS %s RENAME TO %s", tempHierarchyObjectsTable, originalHierarchyObjectsTable))
-		if err != nil {
-			return err
-		}
-		err = dbInstance.Exec(fmt.Sprintf(
-			"ALTER INDEX %s_object_id_index RENAME TO %s_object_id_index",
-			tempHierarchyObjectsTable,
-			originalHierarchyObjectsTable,
-		))
-		err = dbInstance.Exec(fmt.Sprintf(
-			"ALTER INDEX %s_parent_object_id_index RENAME TO %s_parent_object_id_index",
-			tempHierarchyObjectsTable,
-			originalHierarchyObjectsTable,
-		))
-		err = dbInstance.Exec(fmt.Sprintf("ALTER TABLE IF EXISTS %s RENAME TO %s", tempFiasKladrTableName, originalFiasKladrTableName))
-		err = dbInstance.Exec(fmt.Sprintf(
-			"ALTER INDEX %s_object_id_index RENAME TO %s_object_id_index",
-			tempFiasKladrTableName,
-			originalFiasKladrTableName,
-		))
-		err = dbInstance.Exec(fmt.Sprintf(
-			"ALTER INDEX %s_kladr_id_index RENAME TO %s_kladr_id_index",
-			tempFiasKladrTableName,
-			originalFiasKladrTableName,
-		))
-		return err
+		return pgsql.MigrateFromTempTables()
 	default:
 		return nil
 	}
