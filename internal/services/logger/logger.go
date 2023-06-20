@@ -28,7 +28,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	LogService = log.New(LogFile, "", log.LstdFlags|log.Lshortfile)
+	LogService = log.New(LogFile, "", log.LstdFlags)
 }
 
 func Println(logMessage ...any) {
