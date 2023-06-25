@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fias_to_sql/internal/app/exit"
+	"fias_to_sql/internal/app/reboot"
 	"fias_to_sql/internal/config"
 	"fias_to_sql/internal/services/disk"
 	"fias_to_sql/internal/services/error/handler"
@@ -36,6 +37,14 @@ func Run() error {
 		return errors.New("no space left on device")
 	}
 	logger.Println("init app success")
+
+	if reboot.CheckSoftTerminate() {
+		logger.Println("reboot after terminate")
+		err := reboot.RebootAfterSoftTerminate()
+		if err != nil {
+			return handler.ErrorHandler(err)
+		}
+	}
 
 	path, err := fias.GetArchivePath()
 	if err != nil {
