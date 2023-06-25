@@ -99,6 +99,7 @@ func GetImportDestination() (string, error) {
 }
 
 func ImportXml(
+	ctx context.Context,
 	archivePath string,
 	importDestinationStr ...string,
 ) error {
@@ -120,8 +121,12 @@ func ImportXml(
 		threadNumber, _ = strconv.Atoi(tn)
 	}
 	mutexChan := make(chan struct{}, threadNumber)
-	g, ctx := errgroup.WithContext(context.Background())
+	g, onErrCtx := errgroup.WithContext(context.Background())
 	for _, file := range files {
+		if ctx.Err() != nil {
+			break
+		}
+
 		var objectType string
 		if strings.Contains(file.Name, config.GetConfig("HOUSES_FILE_PART")) {
 			objectType = "house"
@@ -140,7 +145,7 @@ func ImportXml(
 		mutexChan <- struct{}{}
 		g.Go(func() error {
 			select {
-			case <-ctx.Done():
+			case <-onErrCtx.Done():
 				<-mutexChan
 				return nil
 			default:
@@ -164,11 +169,6 @@ func ImportXml(
 						}
 					},
 				)
-				if err != nil {
-					<-mutexChan
-					return err
-				}
-
 				if err != nil {
 					<-mutexChan
 					return err

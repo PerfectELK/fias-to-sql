@@ -1,7 +1,9 @@
 package app
 
 import (
+	"context"
 	"errors"
+	"fias_to_sql/internal/app/exit"
 	"fias_to_sql/internal/config"
 	"fias_to_sql/internal/services/disk"
 	"fias_to_sql/internal/services/error/handler"
@@ -10,6 +12,7 @@ import (
 	"fias_to_sql/internal/services/terminal"
 	"fias_to_sql/migrations"
 	"fias_to_sql/pkg/db"
+	"os"
 	"time"
 )
 
@@ -64,7 +67,27 @@ func Run() error {
 
 	logger.Println("begin import")
 	beginTime := time.Now()
-	err = fias.ImportXml(path, importDestination)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	exit.OnExit(func() {
+		cancel()
+		logger.Println("start terminating app")
+		time.Sleep(10 * time.Second) // Test
+	})
+
+	err = fias.ImportXml(
+		ctx,
+		path,
+		importDestination,
+	)
+
+	if ctx.Err() != nil {
+		logger.Println("end terminating app")
+		os.Exit(-1)
+	}
+
 	endTime := time.Now()
 	if err != nil {
 		return handler.ErrorHandler(err)
