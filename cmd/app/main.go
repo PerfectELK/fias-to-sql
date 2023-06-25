@@ -8,7 +8,7 @@ import (
 
 func main() {
 	defer logger.LogFile.Close()
-	err := app.App()
+	err := app.Run()
 	if err != nil {
 		fmt.Println(err)
 	}

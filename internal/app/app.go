@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func App() error {
+func Run() error {
 	logger.Println("begin init app")
 	err := config.InitConfig()
 	if err != nil {
