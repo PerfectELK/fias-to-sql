@@ -11,6 +11,7 @@ import (
 	"fias_to_sql/internal/services/fias/types"
 	"fias_to_sql/internal/services/logger"
 	"fias_to_sql/internal/services/terminal"
+	"fias_to_sql/pkg/slice"
 	"golang.org/x/sync/errgroup"
 	"io"
 	"os"
@@ -19,6 +20,9 @@ import (
 	"strings"
 )
 
+var FileNames []string
+var FileNamesToDump []string
+
 func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 	filesMap := make(map[string][]*zip.File)
 	filesMap["object"] = make([]*zip.File, 0)
@@ -26,6 +30,10 @@ func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 	filesMap["hierarchy"] = make([]*zip.File, 0)
 
 	for _, file := range zf.File {
+		if len(FileNames) > 0 && !slice.Contains(FileNames, file.Name) {
+			continue
+		}
+
 		var objectType string
 		if strings.Contains(file.Name, config.GetConfig("HOUSES_FILE_PART")) {
 			objectType = "house"
@@ -103,6 +111,7 @@ func ImportXml(
 	archivePath string,
 	importDestinationStr ...string,
 ) error {
+	ArchivePathToDump = archivePath
 	importDestination := "db"
 	if len(importDestinationStr) > 0 {
 		importDestination = importDestinationStr[0]
@@ -124,7 +133,8 @@ func ImportXml(
 	g, onErrCtx := errgroup.WithContext(context.Background())
 	for _, file := range files {
 		if ctx.Err() != nil {
-			break
+			FileNamesToDump = append(FileNamesToDump, file.Name)
+			continue
 		}
 
 		var objectType string

@@ -1,4 +1,4 @@
-package exit
+package shutdown
 
 import (
 	"os"
@@ -8,7 +8,7 @@ import (
 
 var c chan os.Signal
 
-func OnExit(fn func()) {
+func OnShutdown(fn func()) {
 	c = make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {

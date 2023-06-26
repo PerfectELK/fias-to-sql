@@ -3,13 +3,12 @@ package app
 import (
 	"context"
 	"errors"
-	"fias_to_sql/internal/app/exit"
-	"fias_to_sql/internal/app/reboot"
 	"fias_to_sql/internal/config"
 	"fias_to_sql/internal/services/disk"
 	"fias_to_sql/internal/services/error/handler"
 	"fias_to_sql/internal/services/fias"
 	"fias_to_sql/internal/services/logger"
+	"fias_to_sql/internal/services/shutdown"
 	"fias_to_sql/internal/services/terminal"
 	"fias_to_sql/migrations"
 	"fias_to_sql/pkg/db"
@@ -38,9 +37,9 @@ func Run() error {
 	}
 	logger.Println("init app success")
 
-	if reboot.CheckSoftTerminate() {
+	if fias.CheckGracefulShutdown() {
 		logger.Println("reboot after terminate")
-		err := reboot.RebootAfterSoftTerminate()
+		err := fias.RebootAfterGracefulShutdown()
 		if err != nil {
 			return handler.ErrorHandler(err)
 		}
@@ -80,10 +79,9 @@ func Run() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	exit.OnExit(func() {
+	shutdown.OnShutdown(func() {
 		cancel()
-		logger.Println("start terminating app")
-		time.Sleep(10 * time.Second) // Test
+		logger.Println("start shutdown")
 	})
 
 	err = fias.ImportXml(
@@ -93,7 +91,11 @@ func Run() error {
 	)
 
 	if ctx.Err() != nil {
-		logger.Println("end terminating app")
+		err := fias.MakeDump()
+		if err != nil {
+			return handler.ErrorHandler(err)
+		}
+		logger.Println("end shutdown")
 		os.Exit(-1)
 	}
 

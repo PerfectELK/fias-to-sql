@@ -15,6 +15,9 @@ import (
 	"time"
 )
 
+var ArchivePath string
+var ArchivePathToDump string
+
 func GetLinkOnNewestArchive() string {
 	browser := rod.New().MustConnect()
 	defer browser.MustClose()
@@ -84,6 +87,10 @@ func GetLastLocalArchivePath() string {
 }
 
 func GetArchivePath() (string, error) {
+	if ArchivePath != "" {
+		return ArchivePath, nil
+	}
+
 	if localPath := config.GetConfig("ARCHIVE_LOCAL_PATH"); localPath != "" {
 		return localPath, nil
 	}
