@@ -1,9 +1,5 @@
 package types
 
-const (
-	IMPORT_DUMP_FILENAME = "dump.json"
-)
-
 type FiasObject interface {
 	GetIsActive() bool
 }
@@ -63,14 +59,4 @@ func (a *FiasObjectList) AddObject(object FiasObject) {
 
 func (a *FiasObjectList) Clear() {
 	a.List = nil
-}
-
-type Dump struct {
-	ArchivePath string   `json:"archive_path"`
-	TablesType  string   `json:"tables_type"`
-	Files       []string `json:"files"`
-}
-
-func MakeDump() error {
-	return nil
 }

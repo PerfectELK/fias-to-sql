@@ -64,7 +64,7 @@ func ProcessingXml(
 					paramProcessing(al, fo)
 				}
 
-				if len(al.List) >= 50000 {
+				if len(al.List) >= 100000 {
 					fn(al)
 					counter += len(al.List)
 					al.Clear()

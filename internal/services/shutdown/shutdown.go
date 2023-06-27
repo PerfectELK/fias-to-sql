@@ -3,11 +3,14 @@ package shutdown
 import (
 	"encoding/json"
 	"fias_to_sql/internal/config"
-	"fias_to_sql/internal/services/fias/types"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
+)
+
+const (
+	IMPORT_DUMP_FILENAME = "dump.json"
 )
 
 var archivePath string
@@ -19,6 +22,12 @@ var fileNamesToDump []string
 var IsReboot bool
 
 var c chan os.Signal
+
+type Dump struct {
+	ArchivePath string   `json:"archive_path"`
+	TablesType  string   `json:"tables_type"`
+	Files       []string `json:"files"`
+}
 
 func PutFileNameToDump(fileName string) {
 	fileNamesToDump = append(fileNamesToDump, fileName)
@@ -46,9 +55,9 @@ func OnShutdown(fn func()) {
 }
 
 func MakeDump() error {
-	dumpFile := filepath.Join(os.Getenv("APP_ROOT"), "storage", types.IMPORT_DUMP_FILENAME)
+	dumpFile := filepath.Join(os.Getenv("APP_ROOT"), "storage", IMPORT_DUMP_FILENAME)
 
-	var dump types.Dump
+	var dump Dump
 	dump.ArchivePath = archivePathToDump
 	dump.TablesType = config.GetConfig("DB_TABLE_TYPES_FOR_IMPORT")
 	dump.Files = fileNamesToDump
@@ -71,7 +80,7 @@ func MakeDump() error {
 }
 
 func CheckGracefulShutdown() bool {
-	if _, err := os.Stat(filepath.Join(os.Getenv("APP_ROOT"), "storage", types.IMPORT_DUMP_FILENAME)); err != nil {
+	if _, err := os.Stat(filepath.Join(os.Getenv("APP_ROOT"), "storage", IMPORT_DUMP_FILENAME)); err != nil {
 		return false
 	}
 	IsReboot = true
@@ -79,13 +88,13 @@ func CheckGracefulShutdown() bool {
 }
 
 func RebootAfterGracefulShutdown() error {
-	dumpFile := filepath.Join(os.Getenv("APP_ROOT"), "storage", types.IMPORT_DUMP_FILENAME)
+	dumpFile := filepath.Join(os.Getenv("APP_ROOT"), "storage", IMPORT_DUMP_FILENAME)
 	data, err := os.ReadFile(dumpFile)
 	if err != nil {
 		return err
 	}
 
-	var dump types.Dump
+	var dump Dump
 	err = json.Unmarshal(data, &dump)
 	if err != nil {
 		return err
