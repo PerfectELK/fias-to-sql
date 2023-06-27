@@ -3,6 +3,7 @@ package migrations
 import (
 	"errors"
 	"fias_to_sql/internal/config"
+	"fias_to_sql/internal/services/shutdown"
 	"fias_to_sql/migrations/mysql"
 	"fias_to_sql/migrations/pgsql"
 	"fias_to_sql/pkg/db"
@@ -30,18 +31,21 @@ func CreateTables() error {
 		config.SetConfig("DB_ORIGINAL_OBJECTS_TABLE", config.GetConfig("DB_OBJECTS_TABLE"))
 		config.SetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE", config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE"))
 		config.SetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE", config.GetConfig("DB_OBJECTS_KLADR_TABLE"))
+
 		fiasTableName = config.GetConfig("DB_OBJECTS_TABLE") + "_temp"
 		fiasHierarchyTableName = config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE") + "_temp"
 		fiasKladrTableName = config.GetConfig("DB_OBJECTS_KLADR_TABLE") + "_temp"
 		_, tempTableCheck := dbInstance.Query("select * from " + fiasTableName + " LIMIT 1;")
-		if tempTableCheck == nil {
-			return errors.New("fias tables and temp tables is exists")
-		}
+
 		config.SetConfig("DB_OBJECTS_TABLE", fiasTableName)
 		config.SetConfig("DB_OBJECTS_HIERARCHY_TABLE", fiasHierarchyTableName)
 		config.SetConfig("DB_OBJECTS_KLADR_TABLE", fiasKladrTableName)
 		config.SetConfig("DB_TABLE_TYPES_FOR_IMPORT", "temp")
-		return createFiasTables(dbDriver, fiasTableName, fiasHierarchyTableName, fiasKladrTableName)
+		if tempTableCheck == nil && !shutdown.IsReboot {
+			return errors.New("fias tables and temp tables is exists")
+		} else if tempTableCheck == nil {
+			return nil
+		}
 	}
 	return createFiasTables(dbDriver, fiasTableName, fiasHierarchyTableName, fiasKladrTableName)
 }

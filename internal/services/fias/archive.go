@@ -5,6 +5,7 @@ import (
 	"fias_to_sql/internal/config"
 	"fias_to_sql/internal/services/download"
 	"fias_to_sql/internal/services/logger"
+	"fias_to_sql/internal/services/shutdown"
 	"fmt"
 	"github.com/go-rod/rod"
 	"os"
@@ -14,9 +15,6 @@ import (
 	"strings"
 	"time"
 )
-
-var ArchivePath string
-var ArchivePathToDump string
 
 func GetLinkOnNewestArchive() string {
 	browser := rod.New().MustConnect()
@@ -87,8 +85,8 @@ func GetLastLocalArchivePath() string {
 }
 
 func GetArchivePath() (string, error) {
-	if ArchivePath != "" {
-		return ArchivePath, nil
+	if shutdown.IsReboot {
+		return shutdown.GetArchivePath(), nil
 	}
 
 	if localPath := config.GetConfig("ARCHIVE_LOCAL_PATH"); localPath != "" {

@@ -10,6 +10,7 @@ import (
 	"fias_to_sql/internal/models"
 	"fias_to_sql/internal/services/fias/types"
 	"fias_to_sql/internal/services/logger"
+	"fias_to_sql/internal/services/shutdown"
 	"fias_to_sql/internal/services/terminal"
 	"fias_to_sql/pkg/slice"
 	"golang.org/x/sync/errgroup"
@@ -20,9 +21,6 @@ import (
 	"strings"
 )
 
-var FileNames []string
-var FileNamesToDump []string
-
 func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 	filesMap := make(map[string][]*zip.File)
 	filesMap["object"] = make([]*zip.File, 0)
@@ -30,7 +28,7 @@ func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 	filesMap["hierarchy"] = make([]*zip.File, 0)
 
 	for _, file := range zf.File {
-		if len(FileNames) > 0 && !slice.Contains(FileNames, file.Name) {
+		if shutdown.IsReboot && !slice.Contains(shutdown.GetFileNames(), file.Name) {
 			continue
 		}
 
@@ -111,7 +109,7 @@ func ImportXml(
 	archivePath string,
 	importDestinationStr ...string,
 ) error {
-	ArchivePathToDump = archivePath
+	shutdown.SetArchivePathToDump(archivePath)
 	importDestination := "db"
 	if len(importDestinationStr) > 0 {
 		importDestination = importDestinationStr[0]
@@ -133,7 +131,7 @@ func ImportXml(
 	g, onErrCtx := errgroup.WithContext(context.Background())
 	for _, file := range files {
 		if ctx.Err() != nil {
-			FileNamesToDump = append(FileNamesToDump, file.Name)
+			shutdown.PutFileNameToDump(file.Name)
 			continue
 		}
 

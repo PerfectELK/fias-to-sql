@@ -37,9 +37,9 @@ func Run() error {
 	}
 	logger.Println("init app success")
 
-	if fias.CheckGracefulShutdown() {
-		logger.Println("reboot after terminate")
-		err := fias.RebootAfterGracefulShutdown()
+	if shutdown.CheckGracefulShutdown() {
+		logger.Println("reboot after graceful shutdown")
+		err := shutdown.RebootAfterGracefulShutdown()
 		if err != nil {
 			return handler.ErrorHandler(err)
 		}
@@ -91,7 +91,7 @@ func Run() error {
 	)
 
 	if ctx.Err() != nil {
-		err := fias.MakeDump()
+		err := shutdown.MakeDump()
 		if err != nil {
 			return handler.ErrorHandler(err)
 		}
