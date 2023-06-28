@@ -15,12 +15,7 @@ func CreateTables() error {
 		return err
 	}
 
-	dbName := config.GetConfig("DB_NAME")
 	dbDriver := config.GetConfig("DB_DRIVER")
-	err = dbInstance.Use(dbName)
-	if err != nil {
-		return err
-	}
 
 	fiasTableName := config.GetConfig("DB_OBJECTS_TABLE")
 	fiasHierarchyTableName := config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE")

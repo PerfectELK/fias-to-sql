@@ -17,18 +17,27 @@ func CreateDatabase() error {
 	dbName := config.GetConfig("DB_NAME")
 	switch dbInstance.GetDriverName() {
 	case "PGSQL":
-		dbSchema := config.GetConfig("DB_SCHEMA")
-		rows, err := dbInstance.Query(fmt.Sprintf("SELECT * FROM pg_database WHERE datname = '%s'", dbName))
+		rows, err := dbInstance.Query(fmt.Sprintf("SELECT * FROM pg_database WHERE datname = '%s';", dbName))
 		if err != nil {
 			return err
 		}
 		rowsArr := helpers.Scan(rows)
 		if len(rowsArr) == 0 {
-			return dbInstance.Exec(fmt.Sprintf("CREATE DATABASE \"%s\"", dbName))
+			return dbInstance.Exec(fmt.Sprintf("CREATE DATABASE \"%s\";", dbName))
 		}
-		return dbInstance.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS \"%s\"", dbSchema))
+
+		err = dbInstance.Use(dbName)
+		if err != nil {
+			return err
+		}
+		dbSchema := config.GetConfig("DB_SCHEMA")
+		return dbInstance.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", dbSchema))
 	case "MYSQL":
-		return dbInstance.Exec("CREATE DATABASE IF NOT EXISTS " + dbName)
+		err = dbInstance.Exec("CREATE DATABASE IF NOT EXISTS " + dbName)
+		if err != nil {
+			return err
+		}
+		return dbInstance.Use(dbName)
 	default:
 		return errors.New("doesn't selected db driver")
 	}

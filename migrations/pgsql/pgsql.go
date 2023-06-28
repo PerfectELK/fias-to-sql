@@ -11,8 +11,9 @@ func ObjectsTableCreate(tableName string) error {
 	if err != nil {
 		return err
 	}
+	dbSchema := config.GetConfig("DB_SCHEMA")
 	err = dbInstance.Exec(
-		"CREATE TABLE " + tableName + " (" +
+		"CREATE TABLE " + dbSchema + "." + tableName + " (" +
 			"id BIGSERIAL PRIMARY KEY," +
 			"object_id INTEGER NOT NULL DEFAULT 0," +
 			"object_guid VARCHAR(100) NOT NULL DEFAULT ''," +
@@ -24,10 +25,10 @@ func ObjectsTableCreate(tableName string) error {
 		return err
 	}
 	return dbInstance.Exec(
-		"CREATE INDEX " + tableName + "_name_index ON " + tableName + " (name);" +
-			" CREATE INDEX " + tableName + "_object_guid_index ON " + tableName + " (object_guid);" +
-			" CREATE INDEX " + tableName + "_object_id_index ON " + tableName + " (object_id);" +
-			" CREATE INDEX " + tableName + "_type_name_index ON " + tableName + " (type_name);",
+		"CREATE INDEX " + tableName + "_name_index ON " + dbSchema + "." + tableName + " (name);" +
+			" CREATE INDEX " + tableName + "_object_guid_index ON " + dbSchema + "." + tableName + " (object_guid);" +
+			" CREATE INDEX " + tableName + "_object_id_index ON " + dbSchema + "." + tableName + " (object_id);" +
+			" CREATE INDEX " + tableName + "_type_name_index ON " + dbSchema + "." + tableName + " (type_name);",
 	)
 }
 
@@ -36,8 +37,9 @@ func HierarchyTableCreate(tableName string) error {
 	if err != nil {
 		return err
 	}
+	dbSchema := config.GetConfig("DB_SCHEMA")
 	err = dbInstance.Exec(
-		"CREATE TABLE " + tableName + " (" +
+		"CREATE TABLE " + dbSchema + "." + tableName + " (" +
 			"id BIGSERIAL PRIMARY KEY," +
 			"object_id INT NOT NULL DEFAULT 0," +
 			"parent_object_id INT NOT NULL DEFAULT 0);",
@@ -47,8 +49,8 @@ func HierarchyTableCreate(tableName string) error {
 	}
 
 	return dbInstance.Exec(
-		"CREATE INDEX " + tableName + "_object_id_index ON " + tableName + " (object_id);" +
-			" CREATE INDEX " + tableName + "_parent_object_id_index ON " + tableName + " (parent_object_id);",
+		"CREATE INDEX " + tableName + "_object_id_index ON " + dbSchema + "." + tableName + " (object_id);" +
+			" CREATE INDEX " + tableName + "_parent_object_id_index ON " + dbSchema + "." + tableName + " (parent_object_id);",
 	)
 }
 
@@ -57,8 +59,9 @@ func KladrTableCreate(tableName string) error {
 	if err != nil {
 		return err
 	}
+	dbSchema := config.GetConfig("DB_SCHEMA")
 	err = dbInstance.Exec(
-		"CREATE TABLE " + tableName + " (" +
+		"CREATE TABLE " + dbSchema + "." + tableName + " (" +
 			"id BIGSERIAL PRIMARY KEY," +
 			"object_id INT NOT NULL DEFAULT 0," +
 			"kladr_id VARCHAR(50) NOT NULL DEFAULT '');",
@@ -68,8 +71,8 @@ func KladrTableCreate(tableName string) error {
 	}
 
 	return dbInstance.Exec(
-		"CREATE INDEX " + tableName + "_object_id_index ON " + tableName + " (object_id);" +
-			" CREATE INDEX " + tableName + "_kladr_id_index ON " + tableName + " (kladr_id);",
+		"CREATE INDEX " + tableName + "_object_id_index ON " + dbSchema + "." + tableName + " (object_id);" +
+			" CREATE INDEX " + tableName + "_kladr_id_index ON " + dbSchema + "." + tableName + " (kladr_id);",
 	)
 }
 
@@ -91,9 +94,11 @@ func dropOldTables() error {
 		return err
 	}
 
-	originalObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE")
-	originalHierarchyObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE")
-	originalFiasKladrTableName := config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE")
+	dbSchema := config.GetConfig("DB_SCHEMA")
+
+	originalObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE"))
+	originalHierarchyObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE"))
+	originalFiasKladrTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE"))
 
 	err = dbInstance.Exec("DROP TABLE IF EXISTS " + originalObjectsTable + ";")
 	if err != nil {
@@ -113,13 +118,15 @@ func renameTables() error {
 		return err
 	}
 
-	originalObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE")
-	originalHierarchyObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE")
-	originalFiasKladrTableName := config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE")
+	dbSchema := config.GetConfig("DB_SCHEMA")
 
-	tempObjectsTable := config.GetConfig("DB_OBJECTS_TABLE")
-	tempHierarchyObjectsTable := config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE")
-	tempFiasKladrTableName := config.GetConfig("DB_OBJECTS_KLADR_TABLE")
+	originalObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE"))
+	originalHierarchyObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE"))
+	originalFiasKladrTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE"))
+
+	tempObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_OBJECTS_TABLE"))
+	tempHierarchyObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE"))
+	tempFiasKladrTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_OBJECTS_KLADR_TABLE"))
 
 	err = dbInstance.Exec(fmt.Sprintf("ALTER TABLE IF EXISTS %s RENAME TO %s", tempObjectsTable, originalObjectsTable))
 	if err != nil {
