@@ -17,6 +17,7 @@ type Processor struct {
 	table       string
 	sel         []string
 	where       [][]string
+	schema      string
 }
 
 func (m *Processor) Connect(dbName ...string) error {
@@ -32,6 +33,7 @@ func (m *Processor) Connect(dbName ...string) error {
 	}
 	m.db = db
 	m.isConnected = true
+	m.schema = config.GetConfig("DB_SCHEMA")
 	return nil
 }
 
@@ -50,7 +52,7 @@ func (m *Processor) Exec(q string) error {
 }
 
 func (m *Processor) Insert(table string, mm map[string]string) error {
-	queryStr := "INSERT INTO " + table
+	queryStr := fmt.Sprintf("INSERT INTO %s.%s", m.schema, table)
 	var keys []string
 	var values []string
 	for key, elem := range mm {
@@ -77,7 +79,7 @@ func (m *Processor) Insert(table string, mm map[string]string) error {
 }
 
 func (m *Processor) InsertList(table string, keys []types.Key, values [][]string) error {
-	queryStr := "INSERT INTO " + table
+	queryStr := fmt.Sprintf("INSERT INTO %s.%s", m.schema, table)
 
 	keysStr := ""
 	valuesStr := ""
