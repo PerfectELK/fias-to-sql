@@ -18,21 +18,25 @@ func CreateTables() error {
 	dbDriver := config.GetConfig("DB_DRIVER")
 
 	fiasTableName := config.GetConfig("DB_OBJECTS_TABLE")
+	fiasObjectTypesTableName := config.GetConfig("DB_OBJECT_TYPES_TABLE")
 	fiasHierarchyTableName := config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE")
 	fiasKladrTableName := config.GetConfig("DB_OBJECTS_KLADR_TABLE")
 
 	_, tableCheck := dbInstance.Query("select * from " + fiasTableName + " LIMIT 1;")
 	if tableCheck == nil {
 		config.SetConfig("DB_ORIGINAL_OBJECTS_TABLE", config.GetConfig("DB_OBJECTS_TABLE"))
+		config.SetConfig("DB_ORIGINAL_OBJECT_TYPES_TABLE", config.GetConfig("DB_OBJECT_TYPES_TABLE"))
 		config.SetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE", config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE"))
 		config.SetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE", config.GetConfig("DB_OBJECTS_KLADR_TABLE"))
 
 		fiasTableName = config.GetConfig("DB_OBJECTS_TABLE") + "_temp"
+		fiasObjectTypesTableName = config.GetConfig("DB_OBJECT_TYPES_TABLE") + "_temp"
 		fiasHierarchyTableName = config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE") + "_temp"
 		fiasKladrTableName = config.GetConfig("DB_OBJECTS_KLADR_TABLE") + "_temp"
 		_, tempTableCheck := dbInstance.Query("select * from " + fiasTableName + " LIMIT 1;")
 
 		config.SetConfig("DB_OBJECTS_TABLE", fiasTableName)
+		config.SetConfig("DB_OBJECT_TYPES_TABLE", fiasObjectTypesTableName)
 		config.SetConfig("DB_OBJECTS_HIERARCHY_TABLE", fiasHierarchyTableName)
 		config.SetConfig("DB_OBJECTS_KLADR_TABLE", fiasKladrTableName)
 		config.SetConfig("DB_TABLE_TYPES_FOR_IMPORT", "temp")
@@ -42,7 +46,14 @@ func CreateTables() error {
 			return nil
 		}
 	}
-	return createFiasTables(dbDriver, fiasTableName, fiasHierarchyTableName, fiasKladrTableName)
+
+	return createFiasTables(
+		dbDriver,
+		fiasTableName,
+		fiasObjectTypesTableName,
+		fiasHierarchyTableName,
+		fiasKladrTableName,
+	)
 }
 
 func MigrateDataFromTempTables() error {
@@ -64,6 +75,7 @@ func MigrateDataFromTempTables() error {
 func createFiasTables(
 	dbDriver string,
 	fiasTableName string,
+	fiasObjectTypesTableName string,
 	fiasHierarchyTableName string,
 	fiasKladrTableName string,
 ) error {
@@ -80,6 +92,10 @@ func createFiasTables(
 		return mysql.KladrTableCreate(fiasKladrTableName)
 	case "PGSQL":
 		err := pgsql.ObjectsTableCreate(fiasTableName)
+		if err != nil {
+			return err
+		}
+		err = pgsql.ObjectTypesTableCreate(fiasObjectTypesTableName)
 		if err != nil {
 			return err
 		}

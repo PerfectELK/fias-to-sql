@@ -24,6 +24,8 @@ func ProcessingXml(
 		xmlTag = "ITEM"
 	case "param":
 		xmlTag = "PARAM"
+	case "obj-types":
+		xmlTag = "ADDRESSOBJECTTYPE"
 	}
 
 	decoder := xml.NewDecoder(closer)
@@ -50,6 +52,8 @@ func ProcessingXml(
 					fiasObj = &types.Hierarchy{}
 				case "param":
 					fiasObj = &types.Param{}
+				case "obj-types":
+					fiasObj = &types.AddressObjectType{}
 				}
 
 				err := decoder.DecodeElement(&fiasObj, &se)
@@ -62,6 +66,8 @@ func ProcessingXml(
 					fieldProcessing(al, &fiasObj)
 				case *types.Param:
 					paramProcessing(al, fo)
+				case *types.AddressObjectType:
+					objTypeProcessing(al, &fiasObj)
 				}
 
 				if len(al.List) >= 100000 {
@@ -114,4 +120,11 @@ func paramProcessing(
 	}
 
 	list.AddObject(param)
+}
+
+func objTypeProcessing(
+	list *types.FiasObjectList,
+	field *types.FiasObject,
+) {
+	list.AddObject(*field)
 }

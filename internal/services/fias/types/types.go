@@ -39,6 +39,14 @@ type Param struct {
 	EndDate   string `xml:"ENDDATE,attr"`
 }
 
+type AddressObjectType struct {
+	FiasObject
+	Id        int64  `xml:"ID,attr"`
+	Level     int64  `xml:"LEVEL,attr"`
+	Name      string `xml:"NAME,attr"`
+	ShortName string `xml:"SHORTNAME,attr"`
+}
+
 func (f Address) GetIsActive() bool {
 	return f.IsActive
 }

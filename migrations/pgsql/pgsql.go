@@ -24,11 +24,27 @@ func ObjectsTableCreate(tableName string) error {
 	if err != nil {
 		return err
 	}
+
 	return dbInstance.Exec(
 		"CREATE INDEX " + tableName + "_name_index ON " + dbSchema + "." + tableName + " (name);" +
 			" CREATE INDEX " + tableName + "_object_guid_index ON " + dbSchema + "." + tableName + " (object_guid);" +
 			" CREATE INDEX " + tableName + "_object_id_index ON " + dbSchema + "." + tableName + " (object_id);" +
 			" CREATE INDEX " + tableName + "_type_name_index ON " + dbSchema + "." + tableName + " (type_name);",
+	)
+}
+
+func ObjectTypesTableCreate(tableName string) error {
+	dbInstance, err := db.GetDbInstance()
+	if err != nil {
+		return err
+	}
+	dbSchema := config.GetConfig("DB_SCHEMA")
+	return dbInstance.Exec(
+		"CREATE TABLE " + dbSchema + "." + tableName + " (" +
+			"id BIGSERIAL PRIMARY KEY," +
+			"level INT NOT NULL DEFAULT 0," +
+			"short_name VARCHAR(255) NOT NULL DEFAULT ''," +
+			"name VARCHAR(255) NOT NULL DEFAULT '');",
 	)
 }
 
@@ -97,10 +113,15 @@ func dropOldTables() error {
 	dbSchema := config.GetConfig("DB_SCHEMA")
 
 	originalObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE"))
+	originalObjectTypesTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECT_TYPES_TABLE"))
 	originalHierarchyObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE"))
 	originalFiasKladrTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE"))
 
 	err = dbInstance.Exec("DROP TABLE IF EXISTS " + originalObjectsTable + ";")
+	if err != nil {
+		return err
+	}
+	err = dbInstance.Exec("DROP TABLE IF EXISTS " + originalObjectTypesTableName + ";")
 	if err != nil {
 		return err
 	}
@@ -121,14 +142,20 @@ func renameTables() error {
 	dbSchema := config.GetConfig("DB_SCHEMA")
 
 	originalObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE"))
+	originalObjectTypesTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECT_TYPES_TABLE"))
 	originalHierarchyObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE"))
 	originalFiasKladrTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE"))
 
 	tempObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_OBJECTS_TABLE"))
+	tempObjectTypesTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_OBJECT_TYPES_TABLE"))
 	tempHierarchyObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE"))
 	tempFiasKladrTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_OBJECTS_KLADR_TABLE"))
 
 	err = dbInstance.Exec(fmt.Sprintf("ALTER TABLE IF EXISTS %s RENAME TO %s", tempObjectsTable, originalObjectsTable))
+	if err != nil {
+		return err
+	}
+	err = dbInstance.Exec(fmt.Sprintf("ALTER TABLE IF EXISTS %s RENAME TO %s", tempObjectTypesTableName, originalObjectTypesTableName))
 	if err != nil {
 		return err
 	}

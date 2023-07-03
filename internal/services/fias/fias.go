@@ -22,11 +22,7 @@ import (
 )
 
 func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
-	filesMap := make(map[string][]*zip.File)
-	filesMap["object"] = make([]*zip.File, 0)
-	filesMap["house"] = make([]*zip.File, 0)
-	filesMap["hierarchy"] = make([]*zip.File, 0)
-
+	files := make([]*zip.File, 0)
 	for _, file := range zf.File {
 		if shutdown.IsReboot && !slice.Contains(shutdown.GetFileNames(), file.Name) {
 			continue
@@ -49,46 +45,16 @@ func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 			continue
 		}
 		if strings.Contains(file.Name, "_OBJ_TYPES_") {
-			continue
+			objectType = "obj-types"
 		}
 		if strings.Contains(file.Name, "_PARAMS_") {
 			objectType = "param"
 		}
-		filesMap[objectType] = append(filesMap[objectType], file)
+
+		files = append(files, file)
 	}
 
-	var sortedFiles []*zip.File
-	for i := 0; ; i++ {
-		endFilesCounter := 0
-		if len(filesMap["object"]) > i {
-			sortedFiles = append(sortedFiles, filesMap["object"][i])
-		} else {
-			endFilesCounter++
-		}
-
-		if len(filesMap["house"]) > i {
-			sortedFiles = append(sortedFiles, filesMap["house"][i])
-		} else {
-			endFilesCounter++
-		}
-
-		if len(filesMap["hierarchy"]) > i {
-			sortedFiles = append(sortedFiles, filesMap["hierarchy"][i])
-		} else {
-			endFilesCounter++
-		}
-
-		if len(filesMap["param"]) > i {
-			sortedFiles = append(sortedFiles, filesMap["param"][i])
-		} else {
-			endFilesCounter++
-		}
-
-		if endFilesCounter == 4 {
-			break
-		}
-	}
-	return sortedFiles
+	return files
 }
 
 func GetImportDestination() (string, error) {
@@ -147,6 +113,9 @@ func ImportXml(
 		}
 		if strings.Contains(file.Name, "_PARAMS_") {
 			objectType = "param"
+		}
+		if strings.Contains(file.Name, "_OBJ_TYPES_") {
+			objectType = "obj-types"
 		}
 
 		_file := file
@@ -246,6 +215,13 @@ func importToDb(list *types.FiasObjectList) error {
 			model := models.NewParam()
 			model.SetObject_id(fiasObj.ObjectId)
 			model.SetKladr_id(fiasObj.Value)
+			modelList.AppendModel(model)
+		case *types.AddressObjectType:
+			model := models.NewObjectType()
+			model.SetId(fiasObj.Id)
+			model.SetName(fiasObj.Name)
+			model.SetShortName(fiasObj.ShortName)
+			model.SetLevel(fiasObj.Level)
 			modelList.AppendModel(model)
 		}
 		if err != nil {
