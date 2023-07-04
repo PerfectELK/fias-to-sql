@@ -85,6 +85,10 @@ func createFiasTables(
 		if err != nil {
 			return err
 		}
+		err = mysql.ObjectTypesTableCreate(fiasObjectTypesTableName)
+		if err != nil {
+			return err
+		}
 		err = mysql.HierarchyTableCreate(fiasHierarchyTableName)
 		if err != nil {
 			return err

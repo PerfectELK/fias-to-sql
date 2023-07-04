@@ -30,6 +30,20 @@ func ObjectsTableCreate(tableName string) error {
 	)
 }
 
+func ObjectTypesTableCreate(tableName string) error {
+	dbInstance, err := db.GetDbInstance()
+	if err != nil {
+		return err
+	}
+	return dbInstance.Exec(
+		"CREATE TABLE " + tableName + " (" +
+			"`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
+			"level INT NOT NULL DEFAULT 0," +
+			"short_name VARCHAR(255) NOT NULL DEFAULT ''," +
+			"name VARCHAR(255) NOT NULL DEFAULT '') ENGINE=InnoDB;",
+	)
+}
+
 func HierarchyTableCreate(tableName string) error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
@@ -87,10 +101,15 @@ func dropOldTables() error {
 	}
 
 	originalObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE")
+	originalObjectTypesTableName := config.GetConfig("DB_ORIGINAL_OBJECT_TYPES_TABLE")
 	originalHierarchyObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE")
 	originalFiasKladrTableName := config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE")
 
 	err = dbInstance.Exec("DROP TABLE IF EXISTS " + originalObjectsTable + ";")
+	if err != nil {
+		return err
+	}
+	err = dbInstance.Exec("DROP TABLE IF EXISTS " + originalObjectTypesTableName + ";")
 	if err != nil {
 		return err
 	}
@@ -109,14 +128,20 @@ func renameTables() error {
 	}
 
 	originalObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE")
+	originalObjectTypesTableName := config.GetConfig("DB_ORIGINAL_OBJECT_TYPES_TABLE")
 	originalHierarchyObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE")
 	originalFiasKladrTableName := config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE")
 
 	tempObjectsTable := config.GetConfig("DB_OBJECTS_TABLE")
+	tempObjectTypesTableName := config.GetConfig("DB_OBJECT_TYPES_TABLE")
 	tempHierarchyObjectsTable := config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE")
 	tempFiasKladrTableName := config.GetConfig("DB_OBJECTS_KLADR_TABLE")
 
 	err = dbInstance.Exec("RENAME TABLE " + tempObjectsTable + " TO " + originalObjectsTable + ";")
+	if err != nil {
+		return err
+	}
+	err = dbInstance.Exec("RENAME TABLE " + tempObjectTypesTableName + " TO " + originalObjectTypesTableName + ";")
 	if err != nil {
 		return err
 	}
