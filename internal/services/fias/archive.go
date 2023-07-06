@@ -99,7 +99,17 @@ func GetArchivePath() (string, error) {
 		}
 	}
 
-	link := GetLinkOnNewestArchive()
+	var link string
+	if config.GetConfig("ARCHIVE_SOURCE") == "link" {
+		if link = config.GetConfig("ARCHIVE_LINK"); link == "" {
+			return "", errors.New("archive-link var is empty")
+		}
+	}
+
+	if link == "" {
+		link = GetLinkOnNewestArchive()
+	}
+
 	if link == "" {
 		return "", errors.New("cannot get link")
 	}

@@ -3,6 +3,7 @@ package config
 func fiasConfig(m map[string]string) {
 	m["ARCHIVE_LOCAL_PATH"] = ""
 	m["ARCHIVE_SOURCE"] = "local"
+	m["ARCHIVE_LINK"] = ""
 	m["ARCHIVE_PAGE_LINK"] = "https://fias.nalog.ru/Frontend"
 	m["ARCHIVE_LINK_SELECTOR"] = "#OpenDataPagerDataPlaceholder a"
 	m["OBJECT_FILE_PART"] = "AS_ADDR_OBJ"

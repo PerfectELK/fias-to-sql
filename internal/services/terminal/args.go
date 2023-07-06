@@ -21,6 +21,7 @@ func ParseArgs() error {
 		threadNumber              string
 		archivePath               string
 		archiveSource             string
+		archiveLink               string
 	)
 
 	flag.StringVar(&importDestination, "import-destination", "", "")
@@ -36,6 +37,7 @@ func ParseArgs() error {
 	flag.StringVar(&threadNumber, "threads", "", "")
 	flag.StringVar(&archivePath, "archive-path", "", "")
 	flag.StringVar(&archiveSource, "archive-source", "", "")
+	flag.StringVar(&archiveLink, "archive-link", "", "")
 	flag.Parse()
 
 	if importDestination != "" {
@@ -76,6 +78,9 @@ func ParseArgs() error {
 	}
 	if archiveSource != "" {
 		config.SetConfig("ARCHIVE_SOURCE", archiveSource)
+	}
+	if archiveLink != "" {
+		config.SetConfig("ARCHIVE_LINK", archiveLink)
 	}
 
 	return nil
