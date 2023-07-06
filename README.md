@@ -29,9 +29,11 @@ You may use .env file or command line arguments
 -db-password=<123>
 -objects-table=<fias_objects>
 -objects-hierarchy-table=<fias_objects_hierarchy>
--threads=<1,2,3 my processor 12600K was 40% loaded on 6 threads>
+-object-kladr-table=<fias_object_kladr>
+-threads=<1,2,3...>
 -archive-path=<if you have fias archive /path/to/fias/archive.zip>
--archive-source=<local if have atchive in ./storage dir, anything if need to download>
+-archive-source=<local if have atchive in ./storage dir, link if you have download link>
+-archive-link=<required if -archive-source=link http[s]://link/to/archive.zip>
 ```
 
 ### Env
