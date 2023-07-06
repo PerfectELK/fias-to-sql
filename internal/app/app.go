@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fias_to_sql/internal/config"
+	"fias_to_sql/internal/services/dirs"
 	"fias_to_sql/internal/services/disk"
 	"fias_to_sql/internal/services/error/handler"
 	"fias_to_sql/internal/services/fias"
@@ -17,8 +18,12 @@ import (
 )
 
 func Run() error {
+	err := dirs.InitServiceDirs()
+	if err != nil {
+		return handler.ErrorHandler(err)
+	}
 	logger.Println("begin init app")
-	err := config.InitConfig()
+	err = config.InitConfig()
 	if err != nil {
 		return handler.ErrorHandler(err)
 	}
