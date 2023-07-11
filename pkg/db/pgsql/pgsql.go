@@ -17,6 +17,7 @@ type Processor struct {
 	table       string
 	sel         []string
 	where       [][]string
+	limit       int
 	schema      string
 }
 
@@ -145,8 +146,43 @@ func (m *Processor) Select(s []string) abstract.DbProcessor {
 	return m
 }
 
-func (m *Processor) Get() (map[string]string, error) {
-	return nil, nil
+func (m *Processor) Limit(l int) abstract.DbProcessor {
+	m.limit = l
+	return m
+}
+
+func (m *Processor) Get() (*sql.Rows, error) {
+	queryString := "SELECT "
+	if len(m.sel) == 0 {
+		queryString += " * "
+	}
+	for i, field := range m.sel {
+		queryString += fmt.Sprintf("%s ", field)
+		if i != len(m.sel)-1 {
+			queryString += ", "
+		}
+	}
+	queryString += fmt.Sprintf("FROM %s.%s ", m.schema, m.table)
+	if len(m.where) > 0 {
+		queryString += "WHERE "
+		for i, whereCond := range m.where {
+			queryString += fmt.Sprintf("%s %s %s", whereCond[0], whereCond[1], whereCond[2])
+			if i != len(m.where)-1 {
+				queryString += " AND "
+			}
+		}
+	}
+
+	if m.limit > 0 {
+		queryString += fmt.Sprintf("LIMIT %d", m.limit)
+	}
+
+	m.where = [][]string{}
+	m.sel = []string{}
+	m.limit = 0
+
+	rows, err := m.db.Query(queryString)
+	return rows, err
 }
 
 func (m *Processor) Use(q string) error {

@@ -22,7 +22,13 @@ func CreateTables() error {
 	fiasHierarchyTableName := config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE")
 	fiasKladrTableName := config.GetConfig("DB_OBJECTS_KLADR_TABLE")
 
-	_, tableCheck := dbInstance.Query("select * from " + fiasTableName + " LIMIT 1;")
+	_, tableCheck := dbInstance.Table(fiasTableName).Limit(1).Get()
+	if tableCheck == nil &&
+		shutdown.IsReboot &&
+		config.GetConfig("DB_TABLE_TYPES_FOR_IMPORT") == "original" {
+		return nil
+	}
+
 	if tableCheck == nil {
 		config.SetConfig("DB_ORIGINAL_OBJECTS_TABLE", config.GetConfig("DB_OBJECTS_TABLE"))
 		config.SetConfig("DB_ORIGINAL_OBJECT_TYPES_TABLE", config.GetConfig("DB_OBJECT_TYPES_TABLE"))
@@ -33,7 +39,7 @@ func CreateTables() error {
 		fiasObjectTypesTableName = config.GetConfig("DB_OBJECT_TYPES_TABLE") + "_temp"
 		fiasHierarchyTableName = config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE") + "_temp"
 		fiasKladrTableName = config.GetConfig("DB_OBJECTS_KLADR_TABLE") + "_temp"
-		_, tempTableCheck := dbInstance.Query("select * from " + fiasTableName + " LIMIT 1;")
+		_, tempTableCheck := dbInstance.Table(fiasTableName).Limit(1).Get()
 
 		config.SetConfig("DB_OBJECTS_TABLE", fiasTableName)
 		config.SetConfig("DB_OBJECT_TYPES_TABLE", fiasObjectTypesTableName)

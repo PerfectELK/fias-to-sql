@@ -17,6 +17,7 @@ type Processor struct {
 	table       string
 	sel         []string
 	where       [][]string
+	limit       int
 }
 
 func (m *Processor) Connect(dbName ...string) error {
@@ -142,7 +143,12 @@ func (m *Processor) Select(s []string) abstract.DbProcessor {
 	return m
 }
 
-func (m *Processor) Get() (map[string]string, error) {
+func (m *Processor) Limit(l int) abstract.DbProcessor {
+	m.limit = l
+	return m
+}
+
+func (m *Processor) Get() (*sql.Rows, error) {
 	return nil, nil
 }
 

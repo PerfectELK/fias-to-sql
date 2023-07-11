@@ -15,7 +15,8 @@ type DbProcessor interface {
 	Table(t string) DbProcessor
 	Select(s []string) DbProcessor
 	Where(q [][]string) DbProcessor
-	Get() (map[string]string, error)
+	Limit(l int) DbProcessor
+	Get() (*sql.Rows, error)
 	IsConnected() bool
 	Query(string) (*sql.Rows, error)
 	GetDriverName() string
