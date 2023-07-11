@@ -3,6 +3,7 @@ package shutdown
 import (
 	"encoding/json"
 	"fias_to_sql/internal/config"
+	"fias_to_sql/pkg/slice"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -14,27 +15,38 @@ const (
 )
 
 var archivePath string
-var fileNames []string
+var files []DumpFile
 
 var archivePathToDump string
-var fileNamesToDump []string
+var filesToDump []DumpFile
 
 var IsReboot bool
 
 var c chan os.Signal
 
 type Dump struct {
-	ArchivePath string   `json:"archive_path"`
-	TablesType  string   `json:"tables_type"`
-	Files       []string `json:"files"`
+	ArchivePath string     `json:"archive_path"`
+	TablesType  string     `json:"tables_type"`
+	Files       []DumpFile `json:"files"`
 }
 
-func PutFileNameToDump(fileName string) {
-	fileNamesToDump = append(fileNamesToDump, fileName)
+type DumpFile struct {
+	FileName      string `json:"file_name"`
+	RecordsAmount int64  `json:"records_amount"`
 }
 
-func GetFileNames() []string {
-	return fileNames
+func PutFileToDump(fileName DumpFile) {
+	filesToDump = append(filesToDump, fileName)
+}
+
+func GetFiles() []DumpFile {
+	return files
+}
+
+func GetFilesNames() []string {
+	return slice.Map(files, func(file DumpFile) string {
+		return file.FileName
+	})
 }
 
 func GetArchivePath() string {
@@ -60,7 +72,7 @@ func MakeDump() error {
 	var dump Dump
 	dump.ArchivePath = archivePathToDump
 	dump.TablesType = config.GetConfig("DB_TABLE_TYPES_FOR_IMPORT")
-	dump.Files = fileNamesToDump
+	dump.Files = filesToDump
 
 	b, err := json.Marshal(dump)
 	if err != nil {
@@ -101,7 +113,7 @@ func RebootAfterGracefulShutdown() error {
 	}
 
 	archivePath = dump.ArchivePath
-	fileNames = dump.Files
+	files = dump.Files
 	config.SetConfig("DB_TABLE_TYPES_FOR_IMPORT", dump.TablesType)
 
 	err = os.Remove(dumpFile)

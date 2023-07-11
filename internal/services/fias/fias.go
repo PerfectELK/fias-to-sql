@@ -23,8 +23,9 @@ import (
 
 func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 	files := make([]*zip.File, 0)
+	shutdownFiles := shutdown.GetFilesNames()
 	for _, file := range zf.File {
-		if shutdown.IsReboot && !slice.Contains(shutdown.GetFileNames(), file.Name) {
+		if shutdown.IsReboot && !slice.Contains(shutdownFiles, file.Name) {
 			continue
 		}
 
@@ -97,7 +98,7 @@ func ImportXml(
 	g, onErrCtx := errgroup.WithContext(context.Background())
 	for _, file := range files {
 		if ctx.Err() != nil {
-			shutdown.PutFileNameToDump(file.Name)
+			shutdown.PutFileToDump(shutdown.DumpFile{FileName: file.Name, RecordsAmount: 0})
 			continue
 		}
 
@@ -135,14 +136,20 @@ func ImportXml(
 				amount, err := ProcessingXml(
 					c,
 					objectType,
-					func(ol *types.FiasObjectList) {
-						switch importDestination {
-						case "db":
-							err = importToDb(ol)
-						case "json":
-							err = importToJson(ol)
+					func(ol *types.FiasObjectList) error {
+						select {
+						case <-onErrCtx.Done():
+							return errors.New("context is closed")
 						default:
-							err = importToDb(ol)
+							switch importDestination {
+							case "db":
+								err = importToDb(ol)
+							case "json":
+								err = importToJson(ol)
+							default:
+								err = importToDb(ol)
+							}
+							return err
 						}
 					},
 				)

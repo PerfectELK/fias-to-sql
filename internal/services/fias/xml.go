@@ -10,7 +10,7 @@ import (
 func ProcessingXml(
 	closer io.ReadCloser,
 	objectType string,
-	fn func(ol *types.FiasObjectList),
+	fn func(ol *types.FiasObjectList) error,
 ) (int, error) {
 	defer closer.Close()
 
@@ -71,14 +71,20 @@ func ProcessingXml(
 				}
 
 				if len(al.List) >= 100000 {
-					fn(al)
+					err := fn(al)
+					if err != nil {
+						return 0, err
+					}
 					counter += len(al.List)
 					al.Clear()
 				}
 			}
 		}
 	}
-	fn(al)
+	err := fn(al)
+	if err != nil {
+		return 0, err
+	}
 	counter += len(al.List)
 	al.Clear()
 
