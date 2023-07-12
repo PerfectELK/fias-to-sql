@@ -139,7 +139,9 @@ func ImportXml(
 					func(ol *types.FiasObjectList) error {
 						select {
 						case <-onErrCtx.Done():
-							return errors.New("context is closed")
+							return errors.New("error when import, thread stop")
+						case <-ctx.Done():
+							return errors.New("shutdown, thread stop")
 						default:
 							switch importDestination {
 							case "db":
