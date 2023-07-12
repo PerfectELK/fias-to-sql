@@ -32,7 +32,7 @@ type Dump struct {
 
 type DumpFile struct {
 	FileName      string `json:"file_name"`
-	RecordsAmount int64  `json:"records_amount"`
+	RecordsAmount int    `json:"records_amount"`
 }
 
 func PutFileToDump(fileName DumpFile) {
@@ -47,6 +47,14 @@ func GetFilesNames() []string {
 	return slice.Map(files, func(file DumpFile) string {
 		return file.FileName
 	})
+}
+
+func GetFilesWithAmount() map[string]int {
+	m := make(map[string]int)
+	for _, file := range files {
+		m[file.FileName] = file.RecordsAmount
+	}
+	return m
 }
 
 func GetArchivePath() string {
@@ -74,7 +82,7 @@ func MakeDump() error {
 	dump.TablesType = config.GetConfig("DB_TABLE_TYPES_FOR_IMPORT")
 	dump.Files = filesToDump
 
-	b, err := json.Marshal(dump)
+	b, err := json.MarshalIndent(dump, "", "    ")
 	if err != nil {
 		return err
 	}

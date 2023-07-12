@@ -89,6 +89,7 @@ func ImportXml(
 	defer zf.Close()
 
 	files := getSortedXmlFiles(zf)
+	filesWithAmount := shutdown.GetFilesWithAmount()
 
 	threadNumber := 3
 	if tn := config.GetConfig("APP_THREAD_NUMBER"); tn != "" {
@@ -133,14 +134,21 @@ func ImportXml(
 					return err
 				}
 
+				var amountForDump int
 				amount, err := ProcessingXml(
 					c,
 					objectType,
 					func(ol *types.FiasObjectList) error {
+						if filesWithAmount[_file.Name] > amountForDump {
+							amountForDump += len(ol.List)
+							return nil
+						}
 						select {
 						case <-onErrCtx.Done():
+							shutdown.PutFileToDump(shutdown.DumpFile{FileName: _file.Name, RecordsAmount: amountForDump})
 							return errors.New("error when import, thread stop")
 						case <-ctx.Done():
+							shutdown.PutFileToDump(shutdown.DumpFile{FileName: _file.Name, RecordsAmount: amountForDump})
 							return errors.New("shutdown, thread stop")
 						default:
 							switch importDestination {
@@ -150,6 +158,11 @@ func ImportXml(
 								err = importToJson(ol)
 							default:
 								err = importToDb(ol)
+							}
+							if err == nil {
+								amountForDump += len(ol.List)
+							} else {
+								shutdown.PutFileToDump(shutdown.DumpFile{FileName: _file.Name, RecordsAmount: amountForDump})
 							}
 							return err
 						}
