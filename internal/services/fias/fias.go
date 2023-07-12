@@ -135,22 +135,30 @@ func ImportXml(
 				}
 
 				var amountForDump int
+				fileName := _file.Name
 				amount, err := ProcessingXml(
 					c,
 					objectType,
 					func(ol *types.FiasObjectList) error {
-						if filesWithAmount[_file.Name] > amountForDump {
-							amountForDump += len(ol.List)
-							return nil
+						amountInFile, ok := filesWithAmount[fileName]
+						var amountForDumpResult int
+						if ok && amountInFile > amountForDump {
+							amountForDumpResult = amountInFile
+						} else {
+							amountForDumpResult = amountForDump
 						}
 						select {
 						case <-onErrCtx.Done():
-							shutdown.PutFileToDump(shutdown.DumpFile{FileName: _file.Name, RecordsAmount: amountForDump})
+							shutdown.PutFileToDump(shutdown.DumpFile{FileName: fileName, RecordsAmount: amountForDumpResult})
 							return errors.New("error when import, thread stop")
 						case <-ctx.Done():
-							shutdown.PutFileToDump(shutdown.DumpFile{FileName: _file.Name, RecordsAmount: amountForDump})
+							shutdown.PutFileToDump(shutdown.DumpFile{FileName: fileName, RecordsAmount: amountForDumpResult})
 							return errors.New("shutdown, thread stop")
 						default:
+							if ok && amountInFile > amountForDump {
+								amountForDump += len(ol.List)
+								return nil
+							}
 							switch importDestination {
 							case "db":
 								err = importToDb(ol)
@@ -162,7 +170,7 @@ func ImportXml(
 							if err == nil {
 								amountForDump += len(ol.List)
 							} else {
-								shutdown.PutFileToDump(shutdown.DumpFile{FileName: _file.Name, RecordsAmount: amountForDump})
+								shutdown.PutFileToDump(shutdown.DumpFile{FileName: fileName, RecordsAmount: amountForDumpResult})
 							}
 							return err
 						}
