@@ -4,12 +4,14 @@ import (
 	"fias_to_sql/pkg/db"
 	"fias_to_sql/pkg/db/types"
 	"reflect"
-	"strconv"
 	"strings"
 )
 
 type Model interface {
 	Save() error
+	GetTableName() string
+	GetFields() []types.Key
+	GetFieldValues() []string
 }
 
 type ModelList interface {
@@ -28,20 +30,13 @@ func (r *ModelListStruct) AppendModel(mod Model) {
 
 type ModelStruct struct {
 	TableName string
+	Fields    []types.Key
 }
 
-func (r *ModelListStruct) SaveModelList() error {
-	list := r.List
-	dbInstance, err := db.GetDbInstance()
-	if err != nil {
-		return err
-	}
+func GetModelFields(m Model) []types.Key {
+	ir := reflect.TypeOf(m)
+	numFields := reflect.ValueOf(m).Elem().NumField()
 	var keys []types.Key
-	if len(list) == 0 {
-		return nil
-	}
-	ir := reflect.TypeOf(list[0])
-	numFields := reflect.ValueOf(list[0]).Elem().NumField()
 	for i := 0; i < numFields; i++ {
 		tag := ir.Elem().Field(i).Tag.Get("sql")
 		if tag == "" {
@@ -56,21 +51,23 @@ func (r *ModelListStruct) SaveModelList() error {
 			Type: tagArr[1],
 		})
 	}
+	return keys
+}
 
-	var values [][]string
+func (r *ModelListStruct) SaveModelList() error {
+	list := r.List
+	if len(list) == 0 {
+		return nil
+	}
+	dbInstance, err := db.GetDbInstance()
+	if err != nil {
+		return err
+	}
+
+	keys := list[0].GetFields()
+	values := make([][]string, len(list))
 	for _, item := range list {
-		r := reflect.ValueOf(item)
-		var value []string
-		for _, key := range keys {
-			v := reflect.Indirect(r).FieldByName(key.Name)
-			if key.Type == "string" {
-				value = append(value, v.String())
-			}
-			if key.Type == "int" {
-				value = append(value, strconv.FormatInt(v.Int(), 10))
-			}
-		}
-		values = append(values, value)
+		values = append(values, item.GetFieldValues())
 	}
 
 	tableName := reflect.Indirect(reflect.ValueOf(list[0])).FieldByName("TableName").String()

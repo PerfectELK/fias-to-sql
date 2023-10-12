@@ -3,6 +3,7 @@ package models
 import (
 	"fias_to_sql/internal/config"
 	"fias_to_sql/pkg/db"
+	"fias_to_sql/pkg/db/types"
 	"strconv"
 )
 
@@ -56,4 +57,27 @@ func (m *Object) Save() error {
 		"name":        m.name,
 	}
 	return dbInstance.Insert(m.TableName, queryMap)
+}
+
+func (m *Object) GetTableName() string {
+	return m.TableName
+}
+
+func (m *Object) GetFields() []types.Key {
+	if len(m.Fields) != 0 {
+		return m.Fields
+	}
+	m.Fields = GetModelFields(m)
+	return m.Fields
+}
+
+func (m *Object) GetFieldValues() []string {
+	return []string{
+		strconv.FormatInt(m.id, 10),
+		strconv.FormatInt(m.object_id, 10),
+		m.object_guid,
+		m.type_name,
+		strconv.FormatInt(m.level, 10),
+		m.name,
+	}
 }

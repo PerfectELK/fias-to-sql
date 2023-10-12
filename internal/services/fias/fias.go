@@ -22,7 +22,7 @@ import (
 )
 
 func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
-	files := make([]*zip.File, 0)
+	files := make([]*zip.File, len(zf.File))
 	shutdownFiles := shutdown.GetFilesNames()
 	for _, file := range zf.File {
 		if shutdown.IsReboot && !slice.Contains(shutdownFiles, file.Name) {

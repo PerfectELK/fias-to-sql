@@ -3,6 +3,7 @@ package models
 import (
 	"fias_to_sql/internal/config"
 	"fias_to_sql/pkg/db"
+	"fias_to_sql/pkg/db/types"
 	"strconv"
 )
 
@@ -42,4 +43,20 @@ func (h *Hierarchy) Save() error {
 		"parent_object_id": strconv.FormatInt(h.parent_object_id, 10),
 	}
 	return dbInstance.Insert(h.TableName, queryMap)
+}
+
+func (m *Hierarchy) GetFields() []types.Key {
+	if len(m.Fields) != 0 {
+		return m.Fields
+	}
+	m.Fields = GetModelFields(m)
+	return m.Fields
+}
+
+func (m *Hierarchy) GetFieldValues() []string {
+	return []string{
+		strconv.FormatInt(m.id, 10),
+		strconv.FormatInt(m.object_id, 10),
+		strconv.FormatInt(m.parent_object_id, 10),
+	}
 }
