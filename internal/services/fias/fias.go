@@ -216,6 +216,7 @@ func importToDb(list *types.FiasObjectList) error {
 		return nil
 	}
 	var modelList models.ModelListStruct
+	modelList.List = make([]models.Model, len(list.List))
 
 	for _, item := range list.List {
 		var err error
