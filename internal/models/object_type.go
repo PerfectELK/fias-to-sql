@@ -62,7 +62,6 @@ func (m *ObjectType) GetFields() []types.Key {
 
 func (m *ObjectType) GetFieldValues() []string {
 	return []string{
-		strconv.FormatInt(m.id, 10),
 		strconv.FormatInt(m.level, 10),
 		m.name,
 		m.short_name,

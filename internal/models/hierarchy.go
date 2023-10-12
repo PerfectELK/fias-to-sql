@@ -55,7 +55,6 @@ func (m *Hierarchy) GetFields() []types.Key {
 
 func (m *Hierarchy) GetFieldValues() []string {
 	return []string{
-		strconv.FormatInt(m.id, 10),
 		strconv.FormatInt(m.object_id, 10),
 		strconv.FormatInt(m.parent_object_id, 10),
 	}

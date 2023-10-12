@@ -8,6 +8,8 @@ import (
 	"fias_to_sql/pkg/db/types"
 	"fmt"
 	_ "github.com/lib/pq"
+	"strings"
+	"unicode/utf8"
 )
 
 type Processor struct {
@@ -79,11 +81,14 @@ func (m *Processor) Insert(table string, mm map[string]string) error {
 	return m.Exec(queryStr)
 }
 
-func (m *Processor) InsertList(table string, keys []types.Key, values [][]string) error {
-	queryStr := fmt.Sprintf("INSERT INTO %s.%s", m.schema, table)
+const LEN = 20
 
+func (m *Processor) InsertList(table string, keys []types.Key, values [][]string) error {
+	querySB := strings.Builder{}
+	querySB.Grow(len(keys) * LEN)
+
+	fmt.Fprintf(&querySB, "INSERT INTO %s.%s", m.schema, table)
 	keysStr := ""
-	valuesStr := ""
 	for i, val := range keys {
 		afterStr := ""
 		if i != len(keys)-1 {
@@ -91,38 +96,40 @@ func (m *Processor) InsertList(table string, keys []types.Key, values [][]string
 		}
 		keysStr += val.Name + afterStr
 	}
-	queryStr += " (" + keysStr + ") "
+	fmt.Fprintf(&querySB, " ( %s ) ", keysStr)
 
+	valuesSB := strings.Builder{}
+	valuesSB.Grow(len(keys) * len(values) * LEN)
 	queryCount := 0
 	for i, vals := range values {
 		queryCount++
-		valuesStr += "( "
+		valuesSB.WriteString("( ")
 		for key, val := range vals {
 			afterStr := ""
 			if key != len(vals)-1 {
 				afterStr += ", "
 			}
-			valuesStr += "'" + helpers.PgsqlRealEscapeString(val) + "'" + afterStr
+			fmt.Fprintf(&valuesSB, "'%s'%s", helpers.PgsqlRealEscapeString(val), afterStr)
 		}
 		closeStr := ") "
 		if i != len(values)-1 && queryCount < 4000 {
 			closeStr += ", "
 		}
-		valuesStr += closeStr
+		valuesSB.WriteString(closeStr)
 		if queryCount >= 4000 {
-			q := queryStr + "VALUES " + valuesStr + ";"
+			q := fmt.Sprintf("%sVALUES %s;", querySB.String(), valuesSB.String())
 			err := m.Exec(q)
-			valuesStr = ""
+			valuesSB = strings.Builder{}
+			valuesSB.Grow(len(keys) * len(values) * LEN)
 			if err != nil {
-				fmt.Println(err)
 				return err
 			}
 			queryCount = 0
 		}
 	}
-
-	if valuesStr != "" {
-		return m.Exec(queryStr + "VALUES " + valuesStr + ";")
+	if utf8.RuneCountInString(valuesSB.String()) != 0 {
+		q := fmt.Sprintf("%sVALUES %s;", querySB.String(), valuesSB.String())
+		return m.Exec(q)
 	}
 	return nil
 }

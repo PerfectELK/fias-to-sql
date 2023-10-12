@@ -65,11 +65,13 @@ func (r *ModelListStruct) SaveModelList() error {
 	}
 
 	keys := list[0].GetFields()
-	values := make([][]string, len(list))
+	values := make([][]string, 0, len(list))
 	for _, item := range list {
-		values = append(values, item.GetFieldValues())
+		fieldValues := item.GetFieldValues()
+		values = append(values, fieldValues)
 	}
 
 	tableName := reflect.Indirect(reflect.ValueOf(list[0])).FieldByName("TableName").String()
-	return dbInstance.InsertList(tableName, keys, values)
+	err = dbInstance.InsertList(tableName, keys, values)
+	return err
 }

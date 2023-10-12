@@ -55,7 +55,6 @@ func (m *Param) GetFields() []types.Key {
 
 func (m *Param) GetFieldValues() []string {
 	return []string{
-		strconv.FormatInt(m.id, 10),
 		strconv.FormatInt(m.object_id, 10),
 		m.kladr_id,
 	}

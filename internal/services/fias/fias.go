@@ -22,7 +22,7 @@ import (
 )
 
 func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
-	files := make([]*zip.File, len(zf.File))
+	files := make([]*zip.File, 0)
 	shutdownFiles := shutdown.GetFilesNames()
 	for _, file := range zf.File {
 		if shutdown.IsReboot && !slice.Contains(shutdownFiles, file.Name) {
@@ -216,7 +216,7 @@ func importToDb(list *types.FiasObjectList) error {
 		return nil
 	}
 	var modelList models.ModelListStruct
-	modelList.List = make([]models.Model, len(list.List))
+	modelList.List = make([]models.Model, 0, len(list.List))
 
 	for _, item := range list.List {
 		var err error
