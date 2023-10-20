@@ -16,6 +16,8 @@ type ObjectType struct {
 	short_name string `sql:"short_name,string"`
 }
 
+var objectTypeFields []types.Key
+
 func (o *ObjectType) SetId(id int64) {
 	o.id = id
 }
@@ -30,6 +32,10 @@ func (o *ObjectType) SetName(name string) {
 
 func (o *ObjectType) SetShortName(short_name string) {
 	o.short_name = short_name
+}
+
+func (o *ObjectType) GetTableName() string {
+	return o.TableName
 }
 
 func NewObjectType() *ObjectType {
@@ -52,12 +58,12 @@ func (m *ObjectType) Save() error {
 	return dbInstance.Insert(m.TableName, queryMap)
 }
 
-func (m *ObjectType) GetFields() []types.Key {
-	if len(m.Fields) != 0 {
-		return m.Fields
+func (o *ObjectType) GetFields() []types.Key {
+	if len(objectTypeFields) != 0 {
+		return objectTypeFields
 	}
-	m.Fields = GetModelFields(m)
-	return m.Fields
+	objectTypeFields = GetModelFields(o)
+	return objectTypeFields
 }
 
 func (m *ObjectType) GetFieldValues() []string {

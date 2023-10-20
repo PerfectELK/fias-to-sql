@@ -30,7 +30,6 @@ func (r *ModelListStruct) AppendModel(mod Model) {
 
 type ModelStruct struct {
 	TableName string
-	Fields    []types.Key
 }
 
 func GetModelFields(m Model) []types.Key {
@@ -71,7 +70,7 @@ func (r *ModelListStruct) SaveModelList() error {
 		values = append(values, fieldValues)
 	}
 
-	tableName := reflect.Indirect(reflect.ValueOf(list[0])).FieldByName("TableName").String()
+	tableName := list[0].GetTableName()
 	err = dbInstance.InsertList(tableName, keys, values)
 	return err
 }

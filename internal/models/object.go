@@ -18,6 +18,8 @@ type Object struct {
 	name        string `sql:"name,string"`
 }
 
+var fields []types.Key
+
 func (m *Object) SetObject_id(object_id int64) {
 	m.object_id = object_id
 }
@@ -64,11 +66,11 @@ func (m *Object) GetTableName() string {
 }
 
 func (m *Object) GetFields() []types.Key {
-	if len(m.Fields) != 0 {
-		return m.Fields
+	if len(fields) != 0 {
+		return fields
 	}
-	m.Fields = GetModelFields(m)
-	return m.Fields
+	fields = GetModelFields(m)
+	return fields
 }
 
 func (m *Object) GetFieldValues() []string {

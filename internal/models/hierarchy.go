@@ -15,6 +15,8 @@ type Hierarchy struct {
 	parent_object_id int64 `sql:"parent_object_id,int"`
 }
 
+var hierarchyFields []types.Key
+
 func (h *Hierarchy) SetId(id int64) {
 	h.id = id
 }
@@ -25,6 +27,10 @@ func (h *Hierarchy) SetObject_id(object_id int64) {
 
 func (h *Hierarchy) SetParent_object_id(parent_object_id int64) {
 	h.parent_object_id = parent_object_id
+}
+
+func (h *Hierarchy) GetTableName() string {
+	return h.TableName
 }
 
 func NewHierarchy() *Hierarchy {
@@ -46,11 +52,11 @@ func (h *Hierarchy) Save() error {
 }
 
 func (m *Hierarchy) GetFields() []types.Key {
-	if len(m.Fields) != 0 {
-		return m.Fields
+	if len(hierarchyFields) != 0 {
+		return hierarchyFields
 	}
-	m.Fields = GetModelFields(m)
-	return m.Fields
+	hierarchyFields = GetModelFields(m)
+	return hierarchyFields
 }
 
 func (m *Hierarchy) GetFieldValues() []string {

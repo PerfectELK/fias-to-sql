@@ -15,6 +15,8 @@ type Param struct {
 	kladr_id  string `sql:"kladr_id,string"`
 }
 
+var paramFields []types.Key
+
 func (h *Param) SetId(id int64) {
 	h.id = id
 }
@@ -25,6 +27,10 @@ func (h *Param) SetObject_id(object_id int64) {
 
 func (h *Param) SetKladr_id(kladr_id string) {
 	h.kladr_id = kladr_id
+}
+
+func (h *Param) GetTableName() string {
+	return h.TableName
 }
 
 func NewParam() *Param {
@@ -46,11 +52,11 @@ func (h *Param) Save() error {
 }
 
 func (m *Param) GetFields() []types.Key {
-	if len(m.Fields) != 0 {
-		return m.Fields
+	if len(paramFields) != 0 {
+		return paramFields
 	}
-	m.Fields = GetModelFields(m)
-	return m.Fields
+	paramFields = GetModelFields(m)
+	return paramFields
 }
 
 func (m *Param) GetFieldValues() []string {
