@@ -7,6 +7,5 @@ build/pgsql
 build/app
 build/.env
 build/docker-compose.yml
-storage
 main
 main.exe

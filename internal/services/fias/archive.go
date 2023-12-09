@@ -1,6 +1,7 @@
 package fias
 
 import (
+	"archive/zip"
 	"errors"
 	"fias_to_sql/internal/config"
 	"fias_to_sql/internal/services/download"
@@ -8,6 +9,7 @@ import (
 	"fias_to_sql/internal/services/shutdown"
 	"fmt"
 	"github.com/go-rod/rod"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -125,4 +127,53 @@ func GetArchivePath() (string, error) {
 	logger.Println("download complete")
 
 	return pwd, nil
+}
+
+func ExtractZipFiles(zf []*zip.File, destPath string) ([]string, error) {
+	retArr := make([]string, 0, 0)
+
+	_, err := os.ReadDir(destPath)
+	if err != nil {
+		return nil, err
+	}
+
+	buff := make([]byte, 1024*1024)
+	for _, file := range zf {
+		name := strings.Replace(file.Name, "\\", "_", -1)
+		name = strings.Replace(name, "/", "_", -1)
+		newFile, err := os.OpenFile(filepath.Join(destPath, name), os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil, err
+		}
+		reader, err := file.Open()
+		if err != nil {
+			return nil, err
+		}
+		for {
+			n, err := reader.Read(buff)
+			if n > 0 {
+				_, err = newFile.Write(buff[:n])
+				if err != nil {
+					return nil, err
+				}
+			}
+			if err != nil {
+				if err != io.EOF {
+					return nil, err
+				}
+				break
+			}
+		}
+		retArr = append(retArr, newFile.Name())
+		err = newFile.Close()
+		if err != nil {
+			return nil, err
+		}
+		err = reader.Close()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return retArr, nil
 }

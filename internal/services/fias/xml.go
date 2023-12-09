@@ -70,7 +70,7 @@ func ProcessingXml(
 					objTypeProcessing(al, &fiasObj)
 				}
 
-				if len(al.List) >= 500 {
+				if len(al.List) >= 10000 {
 					err := fn(al)
 					if err != nil {
 						return 0, err

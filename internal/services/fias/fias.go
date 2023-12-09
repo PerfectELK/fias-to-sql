@@ -17,12 +17,13 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
 
-func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
-	files := make([]*zip.File, 0)
+func getSortedXmlFiles(zf *zip.ReadCloser) []*os.File {
+	zipFiles := make([]*zip.File, 0)
 	shutdownFiles := shutdown.GetFilesNames()
 	for _, file := range zf.File {
 		if shutdown.IsReboot && !slice.Contains(shutdownFiles, file.Name) {
@@ -39,20 +40,32 @@ func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 		if strings.Contains(file.Name, config.GetConfig("HIERARCHY_FILE_PART")) {
 			objectType = "hierarchy"
 		}
-		if objectType == "" {
-			continue
-		}
-		if strings.Contains(file.Name, "_DIVISION_") {
-			continue
-		}
 		if strings.Contains(file.Name, "_OBJ_TYPES_") {
 			objectType = "obj-types"
 		}
 		if strings.Contains(file.Name, "_PARAMS_") {
 			objectType = "param"
 		}
+		if objectType == "" {
+			continue
+		}
+		if strings.Contains(file.Name, "_DIVISION_") {
+			continue
+		}
 
-		files = append(files, file)
+		zipFiles = append(zipFiles, file)
+	}
+
+	logger.Println("start extract xml files from archive")
+	filePaths, err := ExtractZipFiles(zipFiles, filepath.Join(os.Getenv("APP_ROOT"), "storage", "xml_files"))
+	if err != nil {
+		panic(err)
+	}
+	logger.Println("end extract xml files from archive")
+	files := make([]*os.File, 0, 0)
+	for _, file := range filePaths {
+		f, _ := os.OpenFile(file, os.O_RDONLY, 0666)
+		files = append(files, f)
 	}
 
 	return files
@@ -99,24 +112,24 @@ func ImportXml(
 	g, onErrCtx := errgroup.WithContext(context.Background())
 	for _, file := range files {
 		if ctx.Err() != nil {
-			shutdown.PutFileToDump(shutdown.DumpFile{FileName: file.Name, RecordsAmount: 0})
+			shutdown.PutFileToDump(shutdown.DumpFile{FileName: file.Name(), RecordsAmount: 0})
 			continue
 		}
 
 		var objectType string
-		if strings.Contains(file.Name, config.GetConfig("HOUSES_FILE_PART")) {
+		if strings.Contains(file.Name(), config.GetConfig("HOUSES_FILE_PART")) {
 			objectType = "house"
 		}
-		if strings.Contains(file.Name, config.GetConfig("OBJECT_FILE_PART")) {
+		if strings.Contains(file.Name(), config.GetConfig("OBJECT_FILE_PART")) {
 			objectType = "object"
 		}
-		if strings.Contains(file.Name, config.GetConfig("HIERARCHY_FILE_PART")) {
+		if strings.Contains(file.Name(), config.GetConfig("HIERARCHY_FILE_PART")) {
 			objectType = "hierarchy"
 		}
-		if strings.Contains(file.Name, "_PARAMS_") {
+		if strings.Contains(file.Name(), "_PARAMS_") {
 			objectType = "param"
 		}
-		if strings.Contains(file.Name, "_OBJ_TYPES_") {
+		if strings.Contains(file.Name(), "_OBJ_TYPES_") {
 			objectType = "obj-types"
 		}
 
@@ -126,18 +139,13 @@ func ImportXml(
 			select {
 			case <-onErrCtx.Done():
 				<-mutexChan
+				_file.Close()
 				return nil
 			default:
-				c, err := _file.Open()
-				if err != nil {
-					<-mutexChan
-					return err
-				}
-
 				var amountForDump int
-				fileName := _file.Name
+				fileName := _file.Name()
 				amount, err := ProcessingXml(
-					c,
+					_file,
 					objectType,
 					func(ol *types.FiasObjectList) error {
 						amountInFile, ok := filesWithAmount[fileName]
@@ -178,10 +186,12 @@ func ImportXml(
 				)
 				if err != nil {
 					<-mutexChan
+					_file.Close()
 					return err
 				}
 				<-mutexChan
-				logger.Println(_file.Name, ": records amount (", amount, ") [OK]")
+				logger.Println(_file.Name(), ": records amount (", amount, ") [OK]")
+				_file.Close()
 				return nil
 			}
 		})
