@@ -137,8 +137,16 @@ func ExtractZipFiles(zf []*zip.File, destPath string) ([]string, error) {
 		return nil, err
 	}
 
+	// for tests only
+	//counter := 0
+	// for tests only
 	buff := make([]byte, 1024*1024)
 	for _, file := range zf {
+		// for tests only
+		//if counter > 50 {
+		//	break
+		//}
+		// for tests only
 		name := strings.Replace(file.Name, "\\", "_", -1)
 		name = strings.Replace(name, "/", "_", -1)
 		newFile, err := os.OpenFile(filepath.Join(destPath, name), os.O_CREATE|os.O_WRONLY, 0644)
@@ -173,6 +181,9 @@ func ExtractZipFiles(zf []*zip.File, destPath string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
+		// for tests only
+		//counter++
+		// for tests only
 	}
 
 	return retArr, nil

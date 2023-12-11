@@ -12,6 +12,7 @@ import (
 	"fias_to_sql/internal/services/logger"
 	"fias_to_sql/internal/services/shutdown"
 	"fias_to_sql/internal/services/terminal"
+	"fias_to_sql/pkg/filehandler"
 	"fias_to_sql/pkg/slice"
 	"golang.org/x/sync/errgroup"
 	"io"
@@ -22,7 +23,12 @@ import (
 	"strings"
 )
 
-func getSortedXmlFiles(zf *zip.ReadCloser) []*os.File {
+type FiasFile interface {
+	Open(flag int, perm os.FileMode) (*os.File, error)
+	Close() error
+}
+
+func getSortedXmlFiles(zf *zip.ReadCloser) []FiasFile {
 	zipFiles := make([]*zip.File, 0)
 	shutdownFiles := shutdown.GetFilesNames()
 	for _, file := range zf.File {
@@ -62,10 +68,10 @@ func getSortedXmlFiles(zf *zip.ReadCloser) []*os.File {
 		panic(err)
 	}
 	logger.Println("end extract xml files from archive")
-	files := make([]*os.File, 0, 0)
+	files := make([]FiasFile, 0, 0)
 	for _, file := range filePaths {
-		f, _ := os.OpenFile(file, os.O_RDONLY, 0666)
-		files = append(files, f)
+		f := filehandler.NewFile(file)
+		files = append(files, &f)
 	}
 
 	return files
@@ -111,29 +117,32 @@ func ImportXml(
 	mutexChan := make(chan struct{}, threadNumber)
 	g, onErrCtx := errgroup.WithContext(context.Background())
 	for _, file := range files {
+		readCloser, _ := file.Open(os.O_RDONLY, 0666)
+
 		if ctx.Err() != nil {
-			shutdown.PutFileToDump(shutdown.DumpFile{FileName: file.Name(), RecordsAmount: 0})
+			shutdown.PutFileToDump(shutdown.DumpFile{FileName: readCloser.Name(), RecordsAmount: 0})
+			readCloser.Close()
 			continue
 		}
 
 		var objectType string
-		if strings.Contains(file.Name(), config.GetConfig("HOUSES_FILE_PART")) {
+		if strings.Contains(readCloser.Name(), config.GetConfig("HOUSES_FILE_PART")) {
 			objectType = "house"
 		}
-		if strings.Contains(file.Name(), config.GetConfig("OBJECT_FILE_PART")) {
+		if strings.Contains(readCloser.Name(), config.GetConfig("OBJECT_FILE_PART")) {
 			objectType = "object"
 		}
-		if strings.Contains(file.Name(), config.GetConfig("HIERARCHY_FILE_PART")) {
+		if strings.Contains(readCloser.Name(), config.GetConfig("HIERARCHY_FILE_PART")) {
 			objectType = "hierarchy"
 		}
-		if strings.Contains(file.Name(), "_PARAMS_") {
+		if strings.Contains(readCloser.Name(), "_PARAMS_") {
 			objectType = "param"
 		}
-		if strings.Contains(file.Name(), "_OBJ_TYPES_") {
+		if strings.Contains(readCloser.Name(), "_OBJ_TYPES_") {
 			objectType = "obj-types"
 		}
 
-		_file := file
+		_file := readCloser
 		mutexChan <- struct{}{}
 		g.Go(func() error {
 			select {
