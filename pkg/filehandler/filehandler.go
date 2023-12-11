@@ -25,5 +25,3 @@ func (f *File) Open(flag int, perm os.FileMode) (*os.File, error) {
 func (f *File) Close() error {
 	return f.file.Close()
 }
-
-// test
