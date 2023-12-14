@@ -6,7 +6,9 @@ import (
 	"fmt"
 )
 
-func ObjectsTableCreate(tableName string) error {
+type PgsqlMigrator struct{}
+
+func (p PgsqlMigrator) ObjectsTableCreate(tableName string) error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -33,7 +35,7 @@ func ObjectsTableCreate(tableName string) error {
 	)
 }
 
-func ObjectTypesTableCreate(tableName string) error {
+func (p PgsqlMigrator) ObjectTypesTableCreate(tableName string) error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -48,7 +50,7 @@ func ObjectTypesTableCreate(tableName string) error {
 	)
 }
 
-func HierarchyTableCreate(tableName string) error {
+func (p PgsqlMigrator) HierarchyTableCreate(tableName string) error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -70,7 +72,7 @@ func HierarchyTableCreate(tableName string) error {
 	)
 }
 
-func KladrTableCreate(tableName string) error {
+func (p PgsqlMigrator) KladrTableCreate(tableName string) error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -92,19 +94,19 @@ func KladrTableCreate(tableName string) error {
 	)
 }
 
-func MigrateFromTempTables() error {
-	err := dropOldTables()
+func (p PgsqlMigrator) MigrateFromTempTables() error {
+	err := p.dropOldTables()
 	if err != nil {
 		return err
 	}
-	err = renameTables()
+	err = p.renameTables()
 	if err != nil {
 		return err
 	}
-	return renameIndexes()
+	return p.renameIndexes()
 }
 
-func dropOldTables() error {
+func (p PgsqlMigrator) dropOldTables() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -133,7 +135,7 @@ func dropOldTables() error {
 	return err
 }
 
-func renameTables() error {
+func (p PgsqlMigrator) renameTables() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -167,7 +169,7 @@ func renameTables() error {
 	return err
 }
 
-func renameIndexes() error {
+func (p PgsqlMigrator) renameIndexes() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err

@@ -9,13 +9,31 @@ import (
 	"fias_to_sql/pkg/db"
 )
 
+type migrator interface {
+	ObjectsTableCreate(fiasTableName string) error
+	ObjectTypesTableCreate(fiasObjectTypesTableName string) error
+	HierarchyTableCreate(fiasHierarchyTableName string) error
+	KladrTableCreate(fiasKladrTableName string) error
+	MigrateFromTempTables() error
+}
+
+func getMigrator() migrator {
+	dbDriver := config.GetConfig("DB_DRIVER")
+	var m migrator
+	switch dbDriver {
+	case "MYSQL":
+		m = mysql.MysqlMigrator{}
+	case "PGSQL":
+		m = pgsql.PgsqlMigrator{}
+	}
+	return m
+}
+
 func CreateTables() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
 	}
-
-	dbDriver := config.GetConfig("DB_DRIVER")
 
 	fiasTableName := config.GetConfig("DB_OBJECTS_TABLE")
 	fiasObjectTypesTableName := config.GetConfig("DB_OBJECT_TYPES_TABLE")
@@ -54,7 +72,6 @@ func CreateTables() error {
 	}
 
 	return createFiasTables(
-		dbDriver,
 		fiasTableName,
 		fiasObjectTypesTableName,
 		fiasHierarchyTableName,
@@ -67,54 +84,28 @@ func MigrateDataFromTempTables() error {
 		return nil
 	}
 
-	dbDriver := config.GetConfig("DB_DRIVER")
-	switch dbDriver {
-	case "MYSQL":
-		return mysql.MigrateFromTempTables()
-	case "PGSQL":
-		return pgsql.MigrateFromTempTables()
-	default:
-		return nil
-	}
+	m := getMigrator()
+	return m.MigrateFromTempTables()
 }
 
 func createFiasTables(
-	dbDriver string,
 	fiasTableName string,
 	fiasObjectTypesTableName string,
 	fiasHierarchyTableName string,
 	fiasKladrTableName string,
 ) error {
-	switch dbDriver {
-	case "MYSQL":
-		err := mysql.ObjectsTableCreate(fiasTableName)
-		if err != nil {
-			return err
-		}
-		err = mysql.ObjectTypesTableCreate(fiasObjectTypesTableName)
-		if err != nil {
-			return err
-		}
-		err = mysql.HierarchyTableCreate(fiasHierarchyTableName)
-		if err != nil {
-			return err
-		}
-		return mysql.KladrTableCreate(fiasKladrTableName)
-	case "PGSQL":
-		err := pgsql.ObjectsTableCreate(fiasTableName)
-		if err != nil {
-			return err
-		}
-		err = pgsql.ObjectTypesTableCreate(fiasObjectTypesTableName)
-		if err != nil {
-			return err
-		}
-		err = pgsql.HierarchyTableCreate(fiasHierarchyTableName)
-		if err != nil {
-			return err
-		}
-		return pgsql.KladrTableCreate(fiasKladrTableName)
-	default:
-		return nil
+	m := getMigrator()
+	err := m.ObjectsTableCreate(fiasTableName)
+	if err != nil {
+		return err
 	}
+	err = m.ObjectTypesTableCreate(fiasObjectTypesTableName)
+	if err != nil {
+		return err
+	}
+	err = m.HierarchyTableCreate(fiasHierarchyTableName)
+	if err != nil {
+		return err
+	}
+	return m.KladrTableCreate(fiasKladrTableName)
 }

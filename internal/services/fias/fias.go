@@ -12,23 +12,22 @@ import (
 	"fias_to_sql/internal/services/logger"
 	"fias_to_sql/internal/services/shutdown"
 	"fias_to_sql/internal/services/terminal"
-	"fias_to_sql/pkg/filehandler"
 	"fias_to_sql/pkg/slice"
 	"golang.org/x/sync/errgroup"
 	"io"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
 
 type FiasFile interface {
-	Open(flag int, perm os.FileMode) (*os.File, error)
+	//Open(flag int, perm os.FileMode) (*os.File, error)
+	Open() (io.ReadCloser, error)
 	Close() error
 }
 
-func getSortedXmlFiles(zf *zip.ReadCloser) []FiasFile {
+func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 	zipFiles := make([]*zip.File, 0)
 	shutdownFiles := shutdown.GetFilesNames()
 	for _, file := range zf.File {
@@ -61,20 +60,20 @@ func getSortedXmlFiles(zf *zip.ReadCloser) []FiasFile {
 
 		zipFiles = append(zipFiles, file)
 	}
-
-	logger.Println("start extract xml files from archive")
-	filePaths, err := ExtractZipFiles(zipFiles, filepath.Join(os.Getenv("APP_ROOT"), "storage", "xml_files"))
-	if err != nil {
-		panic(err)
-	}
-	logger.Println("end extract xml files from archive")
-	files := make([]FiasFile, 0, 0)
-	for _, file := range filePaths {
-		f := filehandler.NewFile(file)
-		files = append(files, &f)
-	}
-
-	return files
+	return zipFiles
+	//logger.Println("start extract xml files from archive")
+	//filePaths, err := ExtractZipFiles(zipFiles, filepath.Join(os.Getenv("APP_ROOT"), "storage", "xml_files"))
+	//if err != nil {
+	//	panic(err)
+	//}
+	//logger.Println("end extract xml files from archive")
+	//files := make([]FiasFile, 0, 0)
+	//for _, file := range filePaths {
+	//	f := filehandler.NewFile(file)
+	//	files = append(files, &f)
+	//}
+	//
+	//return files
 }
 
 func GetImportDestination() (string, error) {
@@ -117,44 +116,40 @@ func ImportXml(
 	mutexChan := make(chan struct{}, threadNumber)
 	g, onErrCtx := errgroup.WithContext(context.Background())
 	for _, file := range files {
-		readCloser, _ := file.Open(os.O_RDONLY, 0666)
-
 		if ctx.Err() != nil {
-			shutdown.PutFileToDump(shutdown.DumpFile{FileName: readCloser.Name(), RecordsAmount: 0})
-			readCloser.Close()
+			shutdown.PutFileToDump(shutdown.DumpFile{FileName: file.Name, RecordsAmount: 0})
 			continue
 		}
 
 		var objectType string
-		if strings.Contains(readCloser.Name(), config.GetConfig("HOUSES_FILE_PART")) {
+		if strings.Contains(file.Name, config.GetConfig("HOUSES_FILE_PART")) {
 			objectType = "house"
 		}
-		if strings.Contains(readCloser.Name(), config.GetConfig("OBJECT_FILE_PART")) {
+		if strings.Contains(file.Name, config.GetConfig("OBJECT_FILE_PART")) {
 			objectType = "object"
 		}
-		if strings.Contains(readCloser.Name(), config.GetConfig("HIERARCHY_FILE_PART")) {
+		if strings.Contains(file.Name, config.GetConfig("HIERARCHY_FILE_PART")) {
 			objectType = "hierarchy"
 		}
-		if strings.Contains(readCloser.Name(), "_PARAMS_") {
+		if strings.Contains(file.Name, "_PARAMS_") {
 			objectType = "param"
 		}
-		if strings.Contains(readCloser.Name(), "_OBJ_TYPES_") {
+		if strings.Contains(file.Name, "_OBJ_TYPES_") {
 			objectType = "obj-types"
 		}
 
-		_file := readCloser
 		mutexChan <- struct{}{}
+		f, err := file.Open()
 		g.Go(func() error {
 			select {
 			case <-onErrCtx.Done():
 				<-mutexChan
-				_file.Close()
 				return nil
 			default:
 				var amountForDump int
-				fileName := _file.Name()
+				fileName := file.Name
 				amount, err := ProcessingXml(
-					_file,
+					f,
 					objectType,
 					func(ol *types.FiasObjectList) error {
 						amountInFile, ok := filesWithAmount[fileName]
@@ -195,12 +190,10 @@ func ImportXml(
 				)
 				if err != nil {
 					<-mutexChan
-					_file.Close()
 					return err
 				}
 				<-mutexChan
-				logger.Println(_file.Name(), ": records amount (", amount, ") [OK]")
-				_file.Close()
+				logger.Println(file.Name, ": records amount (", amount, ") [OK]")
 				return nil
 			}
 		})
