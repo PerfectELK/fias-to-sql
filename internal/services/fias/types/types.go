@@ -5,7 +5,6 @@ type FiasObject interface {
 }
 
 type Address struct {
-	FiasObject
 	ObjectId   int64  `xml:"OBJECTID,attr"`
 	ObjectGuid string `xml:"OBJECTGUID,attr"`
 	TypeName   string `xml:"TYPENAME,attr"`
@@ -15,7 +14,6 @@ type Address struct {
 }
 
 type House struct {
-	FiasObject
 	ObjectId   int64  `xml:"OBJECTID,attr"`
 	ObjectGuid string `xml:"OBJECTGUID,attr"`
 	HouseNum   string `xml:"HOUSENUM,attr"`
@@ -23,7 +21,6 @@ type House struct {
 }
 
 type Hierarchy struct {
-	FiasObject
 	Id          int64 `xml:"ID,attr"`
 	ObjectId    int64 `xml:"OBJECTID,attr"`
 	ParentObjId int64 `xml:"PARENTOBJID,attr"`
@@ -31,7 +28,6 @@ type Hierarchy struct {
 }
 
 type Param struct {
-	FiasObject
 	ObjectId  int64  `xml:"OBJECTID,attr"`
 	TypeId    int64  `xml:"TYPEID,attr"`
 	Value     string `xml:"VALUE,attr"`
@@ -40,7 +36,6 @@ type Param struct {
 }
 
 type AddressObjectType struct {
-	FiasObject
 	Id        int64  `xml:"ID,attr"`
 	Level     int64  `xml:"LEVEL,attr"`
 	Name      string `xml:"NAME,attr"`

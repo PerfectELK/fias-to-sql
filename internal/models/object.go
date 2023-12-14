@@ -8,7 +8,6 @@ import (
 )
 
 type Object struct {
-	Model
 	ModelStruct
 	id          int64  `sql:"id,int"`
 	object_id   int64  `sql:"object_id,int"`
