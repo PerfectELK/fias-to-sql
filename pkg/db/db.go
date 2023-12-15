@@ -3,14 +3,14 @@ package db
 import (
 	"errors"
 	"fias_to_sql/internal/config"
-	"fias_to_sql/pkg/db/abstract"
+	"fias_to_sql/pkg/db/interfaces"
 	"fias_to_sql/pkg/db/mysql"
 	"fias_to_sql/pkg/db/pgsql"
 )
 
-var dbInstance abstract.DbProcessor
+var dbInstance interfaces.DbProcessor
 
-func GetDbInstance() (abstract.DbProcessor, error) {
+func GetDbInstance() (interfaces.DbProcessor, error) {
 	if dbInstance != nil {
 		return dbInstance, nil
 	}

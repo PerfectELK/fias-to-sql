@@ -3,8 +3,8 @@ package pgsql
 import (
 	"database/sql"
 	"fias_to_sql/internal/config"
-	"fias_to_sql/pkg/db/abstract"
 	"fias_to_sql/pkg/db/helpers"
+	"fias_to_sql/pkg/db/interfaces"
 	"fias_to_sql/pkg/db/types"
 	"fmt"
 	_ "github.com/lib/pq"
@@ -13,7 +13,6 @@ import (
 )
 
 type Processor struct {
-	abstract.DbProcessor
 	db          *sql.DB
 	isConnected bool
 	table       string
@@ -138,22 +137,22 @@ func (m *Processor) IsConnected() bool {
 	return m.isConnected
 }
 
-func (m *Processor) Where(q [][]string) abstract.DbProcessor {
+func (m *Processor) Where(q [][]string) interfaces.DbProcessor {
 	m.where = q
 	return m
 }
 
-func (m *Processor) Table(t string) abstract.DbProcessor {
+func (m *Processor) Table(t string) interfaces.DbProcessor {
 	m.table = t
 	return m
 }
 
-func (m *Processor) Select(s []string) abstract.DbProcessor {
+func (m *Processor) Select(s []string) interfaces.DbProcessor {
 	m.sel = s
 	return m
 }
 
-func (m *Processor) Limit(l int) abstract.DbProcessor {
+func (m *Processor) Limit(l int) interfaces.DbProcessor {
 	m.limit = l
 	return m
 }

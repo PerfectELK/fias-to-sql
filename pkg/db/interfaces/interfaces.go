@@ -1,4 +1,4 @@
-package abstract
+package interfaces
 
 import (
 	"database/sql"
