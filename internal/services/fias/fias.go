@@ -21,12 +21,6 @@ import (
 	"strings"
 )
 
-type FiasFile interface {
-	//Open(flag int, perm os.FileMode) (*os.File, error)
-	Open() (io.ReadCloser, error)
-	Close() error
-}
-
 func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 	zipFiles := make([]*zip.File, 0)
 	shutdownFiles := shutdown.GetFilesNames()
@@ -61,19 +55,6 @@ func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 		zipFiles = append(zipFiles, file)
 	}
 	return zipFiles
-	//logger.Println("start extract xml files from archive")
-	//filePaths, err := ExtractZipFiles(zipFiles, filepath.Join(os.Getenv("APP_ROOT"), "storage", "xml_files"))
-	//if err != nil {
-	//	panic(err)
-	//}
-	//logger.Println("end extract xml files from archive")
-	//files := make([]FiasFile, 0, 0)
-	//for _, file := range filePaths {
-	//	f := filehandler.NewFile(file)
-	//	files = append(files, &f)
-	//}
-	//
-	//return files
 }
 
 func GetImportDestination() (string, error) {
@@ -139,7 +120,8 @@ func ImportXml(
 		}
 
 		mutexChan <- struct{}{}
-		f, err := file.Open()
+		_file := file
+		f, err := _file.Open()
 		g.Go(func() error {
 			select {
 			case <-onErrCtx.Done():
@@ -147,7 +129,7 @@ func ImportXml(
 				return nil
 			default:
 				var amountForDump int
-				fileName := file.Name
+				fileName := _file.Name
 				amount, err := ProcessingXml(
 					f,
 					objectType,
@@ -193,7 +175,7 @@ func ImportXml(
 					return err
 				}
 				<-mutexChan
-				logger.Println(file.Name, ": records amount (", amount, ") [OK]")
+				logger.Println(_file.Name, ": records amount (", amount, ") [OK]")
 				return nil
 			}
 		})

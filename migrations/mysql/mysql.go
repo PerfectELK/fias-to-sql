@@ -5,9 +5,9 @@ import (
 	"fias_to_sql/pkg/db"
 )
 
-type MysqlMigrator struct{}
+type Migrator struct{}
 
-func (m MysqlMigrator) ObjectsTableCreate(tableName string) error {
+func (m Migrator) ObjectsTableCreate(tableName string) error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -32,7 +32,7 @@ func (m MysqlMigrator) ObjectsTableCreate(tableName string) error {
 	)
 }
 
-func (m MysqlMigrator) ObjectTypesTableCreate(tableName string) error {
+func (m Migrator) ObjectTypesTableCreate(tableName string) error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func (m MysqlMigrator) ObjectTypesTableCreate(tableName string) error {
 	)
 }
 
-func (m MysqlMigrator) HierarchyTableCreate(tableName string) error {
+func (m Migrator) HierarchyTableCreate(tableName string) error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (m MysqlMigrator) HierarchyTableCreate(tableName string) error {
 	)
 }
 
-func (m MysqlMigrator) KladrTableCreate(tableName string) error {
+func (m Migrator) KladrTableCreate(tableName string) error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -88,7 +88,7 @@ func (m MysqlMigrator) KladrTableCreate(tableName string) error {
 	)
 }
 
-func (m MysqlMigrator) MigrateFromTempTables() error {
+func (m Migrator) MigrateFromTempTables() error {
 	err := m.dropOldTables()
 	if err != nil {
 		return err
@@ -96,7 +96,7 @@ func (m MysqlMigrator) MigrateFromTempTables() error {
 	return m.renameTables()
 }
 
-func (m MysqlMigrator) dropOldTables() error {
+func (m Migrator) dropOldTables() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -123,7 +123,7 @@ func (m MysqlMigrator) dropOldTables() error {
 	return err
 }
 
-func (m MysqlMigrator) renameTables() error {
+func (m Migrator) renameTables() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err

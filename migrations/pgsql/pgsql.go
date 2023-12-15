@@ -6,9 +6,9 @@ import (
 	"fmt"
 )
 
-type PgsqlMigrator struct{}
+type Migrator struct{}
 
-func (p PgsqlMigrator) ObjectsTableCreate(tableName string) error {
+func (p Migrator) ObjectsTableCreate(tableName string) error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -35,7 +35,7 @@ func (p PgsqlMigrator) ObjectsTableCreate(tableName string) error {
 	)
 }
 
-func (p PgsqlMigrator) ObjectTypesTableCreate(tableName string) error {
+func (p Migrator) ObjectTypesTableCreate(tableName string) error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -50,7 +50,7 @@ func (p PgsqlMigrator) ObjectTypesTableCreate(tableName string) error {
 	)
 }
 
-func (p PgsqlMigrator) HierarchyTableCreate(tableName string) error {
+func (p Migrator) HierarchyTableCreate(tableName string) error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func (p PgsqlMigrator) HierarchyTableCreate(tableName string) error {
 	)
 }
 
-func (p PgsqlMigrator) KladrTableCreate(tableName string) error {
+func (p Migrator) KladrTableCreate(tableName string) error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func (p PgsqlMigrator) KladrTableCreate(tableName string) error {
 	)
 }
 
-func (p PgsqlMigrator) MigrateFromTempTables() error {
+func (p Migrator) MigrateFromTempTables() error {
 	err := p.dropOldTables()
 	if err != nil {
 		return err
@@ -106,7 +106,7 @@ func (p PgsqlMigrator) MigrateFromTempTables() error {
 	return p.renameIndexes()
 }
 
-func (p PgsqlMigrator) dropOldTables() error {
+func (p Migrator) dropOldTables() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -135,7 +135,7 @@ func (p PgsqlMigrator) dropOldTables() error {
 	return err
 }
 
-func (p PgsqlMigrator) renameTables() error {
+func (p Migrator) renameTables() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -169,7 +169,7 @@ func (p PgsqlMigrator) renameTables() error {
 	return err
 }
 
-func (p PgsqlMigrator) renameIndexes() error {
+func (p Migrator) renameIndexes() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -247,4 +247,126 @@ func (p PgsqlMigrator) renameIndexes() error {
 		originalFiasKladrTableName,
 	))
 	return err
+}
+
+type ViewCreator struct{}
+
+func (v ViewCreator) CreateSettlementsParentsView() error {
+	dbInstance, err := db.GetDbInstance()
+	if err != nil {
+		return err
+	}
+	dbSchema := config.GetConfig("DB_SCHEMA")
+
+	ObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE"))
+	FiasKladrTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE"))
+	HierarchyObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE"))
+
+	query := fmt.Sprintf("CREATE MATERIALIZED VIEW settlements_parents AS"+
+		"SELECT fias.id,"+
+		"fias.settlement_id,"+
+		"fias.parent_id"+
+		"FROM (WITH cities AS (SELECT %s.object_id"+
+		"FROM %s"+
+		"JOIN %s ON %s.object_id = %s.object_id"+
+		"WHERE (level < 6 OR type_name IN"+
+		"('г', 'г.', 'пгт', 'пгт.', 'Респ', 'обл', 'обл.', 'Аобл', 'а.обл.', 'а.окр.',"+
+		"'АО', 'г.ф.з.')))"+
+		"SELECT %s.id, %s.object_id AS settlement_id, parent_object_id AS parent_id"+
+		"FROM %s"+
+		"JOIN cities AS c1 ON c1.object_id = %s.object_id"+
+		"JOIN cities AS c2 ON c2.object_id = %s.parent_object_id) AS fias;",
+		ObjectsTable,
+		ObjectsTable,
+		FiasKladrTableName,
+		ObjectsTable,
+		FiasKladrTableName,
+		HierarchyObjectsTable,
+		HierarchyObjectsTable,
+		HierarchyObjectsTable,
+		HierarchyObjectsTable,
+		HierarchyObjectsTable,
+	)
+
+	dbInstance.Exec("DROP MATERIALIZED VIEW IF EXISTS settlements_parents")
+	err = dbInstance.Exec(query)
+	if err != nil {
+		return err
+	}
+
+	query = "create index settlements_parents_id" +
+		"on settlements_parents (id);" +
+		"create index settlements_parents_settlement_id" +
+		"on settlements_parents (settlement_id);" +
+		"create index settlements_parents_parent_id" +
+		"on settlements_parents (parent_id);"
+
+	return dbInstance.Exec(query)
+}
+
+func (v ViewCreator) CreateSettlementsView() error {
+	dbInstance, err := db.GetDbInstance()
+	if err != nil {
+		return err
+	}
+	dbSchema := config.GetConfig("DB_SCHEMA")
+
+	ObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE"))
+	ObjectTypesTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECT_TYPES_TABLE"))
+	FiasKladrTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE"))
+
+	query := fmt.Sprintf("CREATE MATERIALIZED VIEW settlements AS"+
+		"SELECT fias.id,"+
+		"fias.fias_id,"+
+		"fias.kladr_id,"+
+		"fias.type,"+
+		"fias.type_short,"+
+		"fias.name,"+
+		"fias.created_at"+
+		"FROM (SELECT %s.object_id                                            as id,"+
+		"object_guid                                                                as fias_id,"+
+		"%s.kladr_id,"+
+		"replace(LOWER(%s.name), '.', '')                            as type,"+
+		"replace(LOWER(type_name), '.', '')                                             as type_short,"+
+		"%s.name,"+
+		"to_char(now(), 'YYYY-MM-DD HH12:MI:SS'::text)::timestamp without time zone AS created_at"+
+		"FROM %s"+
+		"JOIN %s ON %s.object_id = %s.object_id"+
+		"LEFT JOIN %s ON"+
+		"%s.type_name = %s.short_name AND %s.level = %s.level"+
+		"WHERE %s.level < 6"+
+		"OR type_name IN"+
+		"('г', 'г.', 'пгт', 'пгт.', 'Респ', 'обл', 'обл.', 'Аобл', 'а.обл.', 'а.окр.', 'АО', 'г.ф.з.')) AS fias;",
+		ObjectsTable,
+		FiasKladrTableName,
+		ObjectTypesTableName,
+		ObjectsTable,
+		ObjectsTable,
+		FiasKladrTableName,
+		ObjectsTable,
+		FiasKladrTableName,
+		ObjectTypesTableName,
+		ObjectsTable,
+		ObjectTypesTableName,
+		ObjectsTable,
+		ObjectTypesTableName,
+		ObjectsTable,
+	)
+
+	dbInstance.Exec("DROP MATERIALIZED VIEW IF EXISTS settlements")
+	err = dbInstance.Exec(query)
+	if err != nil {
+		return err
+	}
+
+	query = "create index settlements_id" +
+		"on settlements (id);" +
+		"create index settlements_fias_id" +
+		"on settlements (fias_id);" +
+		"create index settlements_kladr_id" +
+		"on settlements (kladr_id);" +
+		"create index settlements_type_short" +
+		"on settlements (type_short);"
+
+	return dbInstance.Exec(query)
 }

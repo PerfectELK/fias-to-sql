@@ -51,6 +51,12 @@ func (f House) GetIsActive() bool {
 func (f Hierarchy) GetIsActive() bool {
 	return f.IsActive
 }
+func (f Param) GetIsActive() bool {
+	return true
+}
+func (f AddressObjectType) GetIsActive() bool {
+	return true
+}
 
 type FiasObjectList struct {
 	List []FiasObject

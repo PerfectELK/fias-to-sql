@@ -104,12 +104,9 @@ func Run() error {
 		os.Exit(-1)
 	}
 
-	endTime := time.Now()
 	if err != nil {
 		return handler.ErrorHandler(err)
 	}
-	logger.Println("import success")
-	logger.Println("import time ", float64(endTime.Unix()-beginTime.Unix())/60, " minutes")
 
 	if importDestination == "db" {
 		logger.Println("begin migrate data from temp to original tables")
@@ -118,7 +115,18 @@ func Run() error {
 			return handler.ErrorHandler(err)
 		}
 		logger.Println("migration success")
+
+		logger.Println("create additional views")
+		err = migrations.CreateAdditionalViews()
+		if err != nil {
+			return handler.ErrorHandler(err)
+		}
+		logger.Println("create additional views success")
 	}
+
+	logger.Println("import success")
+	endTime := time.Now()
+	logger.Println("import time ", float64(endTime.Unix()-beginTime.Unix())/60, " minutes")
 
 	return nil
 }

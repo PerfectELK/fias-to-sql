@@ -17,16 +17,33 @@ type migrator interface {
 	MigrateFromTempTables() error
 }
 
+type viewCreator interface {
+	CreateSettlementsView() error
+	CreateSettlementsParentsView() error
+}
+
 func getMigrator() migrator {
 	dbDriver := config.GetConfig("DB_DRIVER")
 	var m migrator
 	switch dbDriver {
 	case "MYSQL":
-		m = mysql.MysqlMigrator{}
+		m = mysql.Migrator{}
 	case "PGSQL":
-		m = pgsql.PgsqlMigrator{}
+		m = pgsql.Migrator{}
 	}
 	return m
+}
+
+func getViewCreator() viewCreator {
+	dbDriver := config.GetConfig("DB_DRIVER")
+	var c viewCreator
+	switch dbDriver {
+	case "MYSQL":
+		return nil
+	case "PGSQL":
+		c = pgsql.ViewCreator{}
+	}
+	return c
 }
 
 func CreateTables() error {
@@ -86,6 +103,20 @@ func MigrateDataFromTempTables() error {
 
 	m := getMigrator()
 	return m.MigrateFromTempTables()
+}
+
+func CreateAdditionalViews() error {
+	c := getViewCreator()
+	if c == nil {
+		return nil
+	}
+
+	err := c.CreateSettlementsView()
+	if err != nil {
+		return err
+	}
+
+	return c.CreateSettlementsParentsView()
 }
 
 func createFiasTables(
