@@ -57,7 +57,7 @@ func (p *Migrator) ObjectTypesTableCreate() error {
 	}
 	dbSchema := config.GetConfig("DB_SCHEMA")
 	return dbInstance.Exec(
-		"CREATE TABLE " + dbSchema + "." + p.objectsTable + " (" +
+		"CREATE TABLE " + dbSchema + "." + p.objectTypesTable + " (" +
 			"id BIGSERIAL PRIMARY KEY," +
 			"level INT NOT NULL DEFAULT 0," +
 			"short_name VARCHAR(255) NOT NULL DEFAULT ''," +
@@ -182,10 +182,10 @@ func (p *Migrator) renameTables() error {
 
 	dbSchema := config.GetConfig("DB_SCHEMA")
 
-	originalObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE"))
-	originalObjectTypesTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECT_TYPES_TABLE"))
-	originalHierarchyObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE"))
-	originalFiasKladrTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE"))
+	originalObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE")
+	originalObjectTypesTableName := config.GetConfig("DB_ORIGINAL_OBJECT_TYPES_TABLE")
+	originalHierarchyObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE")
+	originalFiasKladrTableName := config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE")
 
 	tempObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_OBJECTS_TABLE"))
 	tempObjectTypesTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_OBJECT_TYPES_TABLE"))
@@ -214,13 +214,15 @@ func (p *Migrator) renameIndexes() error {
 		return err
 	}
 
+	dbSchema := config.GetConfig("DB_SCHEMA")
+
 	originalObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE")
 	originalHierarchyObjectsTable := config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE")
 	originalFiasKladrTableName := config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE")
 
-	tempObjectsTable := config.GetConfig("DB_OBJECTS_TABLE")
-	tempHierarchyObjectsTable := config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE")
-	tempFiasKladrTableName := config.GetConfig("DB_OBJECTS_KLADR_TABLE")
+	tempObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_OBJECTS_TABLE"))
+	tempHierarchyObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE"))
+	tempFiasKladrTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_OBJECTS_KLADR_TABLE"))
 
 	err = dbInstance.Exec(fmt.Sprintf(
 		"ALTER INDEX %s_name_index RENAME TO %s_name_index",
@@ -297,11 +299,25 @@ func (v *ViewCreator) CreateSettlementsParentsView() error {
 	}
 	dbSchema := config.GetConfig("DB_SCHEMA")
 
-	ObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE"))
-	FiasKladrTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE"))
-	HierarchyObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE"))
+	objectTableName := config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE")
+	if objectTableName == "" {
+		objectTableName = config.GetConfig("DB_OBJECTS_TABLE")
+	}
+	ObjectsTable := fmt.Sprintf("%s.%s", dbSchema, objectTableName)
 
-	query := fmt.Sprintf("CREATE MATERIALIZED VIEW settlements_parents AS "+
+	kladrTableName := config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE")
+	if kladrTableName == "" {
+		kladrTableName = config.GetConfig("DB_OBJECTS_KLADR_TABLE")
+	}
+	FiasKladrTable := fmt.Sprintf("%s.%s", dbSchema, kladrTableName)
+
+	HierarchyObjectsTableName := config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE")
+	if HierarchyObjectsTableName == "" {
+		HierarchyObjectsTableName = config.GetConfig("DB_OBJECTS_HIERARCHY_TABLE")
+	}
+	HierarchyObjectsTable := fmt.Sprintf("%s.%s", dbSchema, HierarchyObjectsTableName)
+
+	query := fmt.Sprintf("CREATE MATERIALIZED VIEW %s.settlements_parents AS "+
 		"SELECT fias.id, "+
 		"fias.settlement_id, "+
 		"fias.parent_id "+
@@ -315,11 +331,12 @@ func (v *ViewCreator) CreateSettlementsParentsView() error {
 		"FROM %s "+
 		"JOIN cities AS c1 ON c1.object_id = %s.object_id "+
 		"JOIN cities AS c2 ON c2.object_id = %s.parent_object_id) AS fias;",
+		dbSchema,
 		ObjectsTable,
 		ObjectsTable,
-		FiasKladrTableName,
+		FiasKladrTable,
 		ObjectsTable,
-		FiasKladrTableName,
+		FiasKladrTable,
 		HierarchyObjectsTable,
 		HierarchyObjectsTable,
 		HierarchyObjectsTable,
@@ -327,18 +344,18 @@ func (v *ViewCreator) CreateSettlementsParentsView() error {
 		HierarchyObjectsTable,
 	)
 
-	dbInstance.Exec("DROP MATERIALIZED VIEW IF EXISTS settlements_parents")
+	dbInstance.Exec(fmt.Sprintf("DROP MATERIALIZED VIEW IF EXISTS %s.settlements_parents", dbSchema))
 	err = dbInstance.Exec(query)
 	if err != nil {
 		return err
 	}
 
-	query = "create index settlements_parents_id " +
-		"on settlements_parents (id); " +
-		"create index settlements_parents_settlement_id " +
-		"on settlements_parents (settlement_id); " +
-		"create index settlements_parents_parent_id " +
-		"on settlements_parents (parent_id);"
+	query = fmt.Sprintf("create index settlements_parents_id "+
+		"on %s.settlements_parents (id); "+
+		"create index settlements_parents_settlement_id "+
+		"on %s.settlements_parents (settlement_id); "+
+		"create index settlements_parents_parent_id "+
+		"on %s.settlements_parents (parent_id);", dbSchema, dbSchema, dbSchema)
 
 	return dbInstance.Exec(query)
 }
@@ -350,11 +367,25 @@ func (v *ViewCreator) CreateSettlementsView() error {
 	}
 	dbSchema := config.GetConfig("DB_SCHEMA")
 
-	ObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE"))
-	ObjectTypesTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECT_TYPES_TABLE"))
-	FiasKladrTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE"))
+	objectTableName := config.GetConfig("DB_ORIGINAL_OBJECTS_TABLE")
+	if objectTableName == "" {
+		objectTableName = config.GetConfig("DB_OBJECTS_TABLE")
+	}
+	ObjectsTable := fmt.Sprintf("%s.%s", dbSchema, objectTableName)
 
-	query := fmt.Sprintf("CREATE MATERIALIZED VIEW settlements AS "+
+	objectTypesTableName := config.GetConfig("DB_ORIGINAL_OBJECT_TYPES_TABLE")
+	if objectTypesTableName == "" {
+		objectTypesTableName = config.GetConfig("DB_OBJECT_TYPES_TABLE")
+	}
+	ObjectTypesTable := fmt.Sprintf("%s.%s", dbSchema, objectTypesTableName)
+
+	fiasKladrTableName := config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE")
+	if fiasKladrTableName == "" {
+		fiasKladrTableName = config.GetConfig("DB_OBJECTS_KLADR_TABLE")
+	}
+	FiasKladrTable := fmt.Sprintf("%s.%s", dbSchema, fiasKladrTableName)
+
+	query := fmt.Sprintf("CREATE MATERIALIZED VIEW %s.settlements AS "+
 		"SELECT fias.id, "+
 		"fias.fias_id, "+
 		"fias.kladr_id, "+
@@ -376,36 +407,37 @@ func (v *ViewCreator) CreateSettlementsView() error {
 		"WHERE %s.level < 6 "+
 		"OR type_name IN "+
 		"('г', 'г.', 'пгт', 'пгт.', 'Респ', 'обл', 'обл.', 'Аобл', 'а.обл.', 'а.окр.', 'АО', 'г.ф.з.')) AS fias;",
+		dbSchema,
 		ObjectsTable,
-		FiasKladrTableName,
-		ObjectTypesTableName,
+		FiasKladrTable,
+		ObjectTypesTable,
 		ObjectsTable,
 		ObjectsTable,
-		FiasKladrTableName,
+		FiasKladrTable,
 		ObjectsTable,
-		FiasKladrTableName,
-		ObjectTypesTableName,
+		FiasKladrTable,
+		ObjectTypesTable,
 		ObjectsTable,
-		ObjectTypesTableName,
+		ObjectTypesTable,
 		ObjectsTable,
-		ObjectTypesTableName,
+		ObjectTypesTable,
 		ObjectsTable,
 	)
 
-	dbInstance.Exec("DROP MATERIALIZED VIEW IF EXISTS settlements")
+	dbInstance.Exec(fmt.Sprintf("DROP MATERIALIZED VIEW IF EXISTS %s.settlements", dbSchema))
 	err = dbInstance.Exec(query)
 	if err != nil {
 		return err
 	}
 
-	query = "create index settlements_id " +
-		"on settlements (id);" +
-		"create index settlements_fias_id " +
-		"on settlements (fias_id); " +
-		"create index settlements_kladr_id " +
-		"on settlements (kladr_id); " +
-		"create index settlements_type_short " +
-		"on settlements (type_short);"
+	query = fmt.Sprintf("create index settlements_id "+
+		"on %s.settlements (id);"+
+		"create index settlements_fias_id "+
+		"on %s.settlements (fias_id); "+
+		"create index settlements_kladr_id "+
+		"on %s.settlements (kladr_id); "+
+		"create index settlements_type_short "+
+		"on %s.settlements (type_short);", dbSchema, dbSchema, dbSchema, dbSchema)
 
 	return dbInstance.Exec(query)
 }

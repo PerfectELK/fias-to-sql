@@ -32,6 +32,9 @@ func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 		var objectType string
 		if strings.Contains(file.Name, config.GetConfig("HOUSES_FILE_PART")) {
 			objectType = "house"
+			if strings.Contains(file.Name, "AS_HOUSES_PARAMS") {
+				continue
+			}
 		}
 		if strings.Contains(file.Name, config.GetConfig("OBJECT_FILE_PART")) {
 			objectType = "object"
@@ -42,7 +45,7 @@ func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 		if strings.Contains(file.Name, "_OBJ_TYPES_") {
 			objectType = "obj-types"
 		}
-		if strings.Contains(file.Name, "_PARAMS_") {
+		if strings.Contains(file.Name, "_OBJ_PARAMS_") {
 			objectType = "param"
 		}
 		if objectType == "" {
