@@ -109,6 +109,13 @@ func Run() error {
 	}
 
 	if importDestination == "db" {
+		logger.Println("begin create indexes")
+		err = migrations.CreateIndexes()
+		if err != nil {
+			return err
+		}
+		logger.Println("indexes created success")
+
 		logger.Println("begin migrate data from temp to original tables")
 		err = migrations.MigrateDataFromTempTables()
 		if err != nil {

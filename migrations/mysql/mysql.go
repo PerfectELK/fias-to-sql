@@ -5,15 +5,36 @@ import (
 	"fias_to_sql/pkg/db"
 )
 
-type Migrator struct{}
+type Migrator struct {
+	objectsTable     string
+	objectTypesTable string
+	hierarchyTable   string
+	kladrTable       string
+}
 
-func (m Migrator) ObjectsTableCreate(tableName string) error {
+func (m *Migrator) SetObjectsTable(table string) {
+	m.objectsTable = table
+}
+
+func (m *Migrator) SetObjectTypesTable(table string) {
+	m.objectTypesTable = table
+}
+
+func (m *Migrator) SetHierarchyTable(table string) {
+	m.hierarchyTable = table
+}
+
+func (m *Migrator) SetKladrTable(table string) {
+	m.kladrTable = table
+}
+
+func (m *Migrator) ObjectsTableCreate() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
 	}
-	err = dbInstance.Exec(
-		"CREATE TABLE " + tableName + " (" +
+	return dbInstance.Exec(
+		"CREATE TABLE " + m.objectsTable + " (" +
 			"`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
 			"`object_id` INT NOT NULL DEFAULT 0," +
 			"`object_guid` VARCHAR(100) NOT NULL DEFAULT ''," +
@@ -21,24 +42,15 @@ func (m Migrator) ObjectsTableCreate(tableName string) error {
 			"`level` INT NOT NULL DEFAULT 0," +
 			"`name` VARCHAR(255) NOT NULL DEFAULT '') ENGINE=InnoDB;",
 	)
-	if err != nil {
-		return err
-	}
-	return dbInstance.Exec(
-		"CREATE INDEX " + tableName + "_name_index ON " + tableName + " (name);" +
-			" CREATE INDEX " + tableName + "_object_guid_index ON " + tableName + " (object_guid);" +
-			" CREATE INDEX " + tableName + "_object_id_index ON " + tableName + " (object_id);" +
-			" CREATE INDEX " + tableName + "_type_name_index ON " + tableName + " (type_name);",
-	)
 }
 
-func (m Migrator) ObjectTypesTableCreate(tableName string) error {
+func (m *Migrator) ObjectTypesTableCreate() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
 	}
 	return dbInstance.Exec(
-		"CREATE TABLE " + tableName + " (" +
+		"CREATE TABLE " + m.objectTypesTable + " (" +
 			"`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
 			"level INT NOT NULL DEFAULT 0," +
 			"short_name VARCHAR(255) NOT NULL DEFAULT ''," +
@@ -46,49 +58,63 @@ func (m Migrator) ObjectTypesTableCreate(tableName string) error {
 	)
 }
 
-func (m Migrator) HierarchyTableCreate(tableName string) error {
+func (m *Migrator) HierarchyTableCreate() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
 	}
-	err = dbInstance.Exec(
-		"CREATE TABLE " + tableName + " (" +
+	return dbInstance.Exec(
+		"CREATE TABLE " + m.hierarchyTable + " (" +
 			"`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
 			"`object_id` INT NOT NULL DEFAULT 0," +
 			"`parent_object_id` INT NOT NULL DEFAULT 0) ENGINE=InnoDB;",
 	)
-	if err != nil {
-		return err
-	}
-
-	return dbInstance.Exec(
-		"CREATE INDEX " + tableName + "_object_id_index ON " + tableName + " (object_id);" +
-			" CREATE INDEX " + tableName + "_parent_object_id_index ON " + tableName + " (parent_object_id);",
-	)
 }
 
-func (m Migrator) KladrTableCreate(tableName string) error {
+func (m *Migrator) KladrTableCreate() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
 	}
-	err = dbInstance.Exec(
-		"CREATE TABLE " + tableName + " (" +
+	return dbInstance.Exec(
+		"CREATE TABLE " + m.kladrTable + " (" +
 			"`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
 			"`object_id` INT NOT NULL DEFAULT 0," +
 			"`kladr_id` VARCHAR(50) NOT NULL DEFAULT '') ENGINE=InnoDB;",
+	)
+}
+
+func (p *Migrator) CreateIndexes() error {
+	dbInstance, err := db.GetDbInstance()
+	if err != nil {
+		return err
+	}
+
+	err = dbInstance.Exec(
+		"CREATE INDEX " + p.kladrTable + "_object_id_index ON " + p.kladrTable + " (object_id);" +
+			" CREATE INDEX " + p.kladrTable + "_kladr_id_index ON " + p.kladrTable + " (kladr_id);",
+	)
+	if err != nil {
+		return err
+	}
+
+	err = dbInstance.Exec(
+		"CREATE INDEX " + p.hierarchyTable + "_object_id_index ON " + p.hierarchyTable + " (object_id);" +
+			" CREATE INDEX " + p.hierarchyTable + "_parent_object_id_index ON " + p.hierarchyTable + " (parent_object_id);",
 	)
 	if err != nil {
 		return err
 	}
 
 	return dbInstance.Exec(
-		"CREATE INDEX " + tableName + "_object_id_index ON " + tableName + " (object_id);" +
-			" CREATE INDEX " + tableName + "_kladr_id_index ON " + tableName + " (kladr_id);",
+		"CREATE INDEX " + p.objectsTable + "_name_index ON " + p.objectsTable + " (name);" +
+			" CREATE INDEX " + p.objectsTable + "_object_guid_index ON " + p.objectsTable + " (object_guid);" +
+			" CREATE INDEX " + p.objectsTable + "_object_id_index ON " + p.objectsTable + " (object_id);" +
+			" CREATE INDEX " + p.objectsTable + "_type_name_index ON " + p.objectsTable + " (type_name);",
 	)
 }
 
-func (m Migrator) MigrateFromTempTables() error {
+func (m *Migrator) MigrateFromTempTables() error {
 	err := m.dropOldTables()
 	if err != nil {
 		return err
@@ -96,7 +122,7 @@ func (m Migrator) MigrateFromTempTables() error {
 	return m.renameTables()
 }
 
-func (m Migrator) dropOldTables() error {
+func (m *Migrator) dropOldTables() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -123,7 +149,7 @@ func (m Migrator) dropOldTables() error {
 	return err
 }
 
-func (m Migrator) renameTables() error {
+func (m *Migrator) renameTables() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err

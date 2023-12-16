@@ -10,11 +10,17 @@ import (
 )
 
 type migrator interface {
-	ObjectsTableCreate(fiasTableName string) error
-	ObjectTypesTableCreate(fiasObjectTypesTableName string) error
-	HierarchyTableCreate(fiasHierarchyTableName string) error
-	KladrTableCreate(fiasKladrTableName string) error
+	ObjectsTableCreate() error
+	ObjectTypesTableCreate() error
+	HierarchyTableCreate() error
+	CreateIndexes() error
+	KladrTableCreate() error
 	MigrateFromTempTables() error
+
+	SetObjectsTable(table string)
+	SetObjectTypesTable(table string)
+	SetHierarchyTable(table string)
+	SetKladrTable(table string)
 }
 
 type viewCreator interface {
@@ -22,16 +28,20 @@ type viewCreator interface {
 	CreateSettlementsParentsView() error
 }
 
+var _m migrator
+
 func getMigrator() migrator {
+	if _m != nil {
+		return _m
+	}
 	dbDriver := config.GetConfig("DB_DRIVER")
-	var m migrator
 	switch dbDriver {
 	case "MYSQL":
-		m = mysql.Migrator{}
+		_m = &mysql.Migrator{}
 	case "PGSQL":
-		m = pgsql.Migrator{}
+		_m = &pgsql.Migrator{}
 	}
-	return m
+	return _m
 }
 
 func getViewCreator() viewCreator {
@@ -41,7 +51,7 @@ func getViewCreator() viewCreator {
 	case "MYSQL":
 		return nil
 	case "PGSQL":
-		c = pgsql.ViewCreator{}
+		c = &pgsql.ViewCreator{}
 	}
 	return c
 }
@@ -96,6 +106,11 @@ func CreateTables() error {
 	)
 }
 
+func CreateIndexes() error {
+	m := getMigrator()
+	return m.CreateIndexes()
+}
+
 func MigrateDataFromTempTables() error {
 	if config.GetConfig("DB_TABLE_TYPES_FOR_IMPORT") != "temp" {
 		return nil
@@ -126,17 +141,26 @@ func createFiasTables(
 	fiasKladrTableName string,
 ) error {
 	m := getMigrator()
-	err := m.ObjectsTableCreate(fiasTableName)
+
+	if m == nil {
+		return errors.New("error when get migrator instance")
+	}
+	m.SetObjectsTable(fiasTableName)
+	m.SetObjectTypesTable(fiasObjectTypesTableName)
+	m.SetHierarchyTable(fiasHierarchyTableName)
+	m.SetKladrTable(fiasKladrTableName)
+
+	err := m.ObjectsTableCreate()
 	if err != nil {
 		return err
 	}
-	err = m.ObjectTypesTableCreate(fiasObjectTypesTableName)
+	err = m.ObjectTypesTableCreate()
 	if err != nil {
 		return err
 	}
-	err = m.HierarchyTableCreate(fiasHierarchyTableName)
+	err = m.HierarchyTableCreate()
 	if err != nil {
 		return err
 	}
-	return m.KladrTableCreate(fiasKladrTableName)
+	return m.KladrTableCreate()
 }

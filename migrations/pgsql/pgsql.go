@@ -6,16 +6,37 @@ import (
 	"fmt"
 )
 
-type Migrator struct{}
+type Migrator struct {
+	objectsTable     string
+	objectTypesTable string
+	hierarchyTable   string
+	kladrTable       string
+}
 
-func (p Migrator) ObjectsTableCreate(tableName string) error {
+func (p *Migrator) SetObjectsTable(table string) {
+	p.objectsTable = table
+}
+
+func (p *Migrator) SetObjectTypesTable(table string) {
+	p.objectTypesTable = table
+}
+
+func (p *Migrator) SetHierarchyTable(table string) {
+	p.hierarchyTable = table
+}
+
+func (p *Migrator) SetKladrTable(table string) {
+	p.kladrTable = table
+}
+
+func (p *Migrator) ObjectsTableCreate() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
 	}
 	dbSchema := config.GetConfig("DB_SCHEMA")
 	err = dbInstance.Exec(
-		"CREATE TABLE " + dbSchema + "." + tableName + " (" +
+		"CREATE TABLE " + dbSchema + "." + p.objectsTable + " (" +
 			"id BIGSERIAL PRIMARY KEY," +
 			"object_id INTEGER NOT NULL DEFAULT 0," +
 			"object_guid VARCHAR(100) NOT NULL DEFAULT ''," +
@@ -26,23 +47,17 @@ func (p Migrator) ObjectsTableCreate(tableName string) error {
 	if err != nil {
 		return err
 	}
-
-	return dbInstance.Exec(
-		"CREATE INDEX " + tableName + "_name_index ON " + dbSchema + "." + tableName + " (name);" +
-			" CREATE INDEX " + tableName + "_object_guid_index ON " + dbSchema + "." + tableName + " (object_guid);" +
-			" CREATE INDEX " + tableName + "_object_id_index ON " + dbSchema + "." + tableName + " (object_id);" +
-			" CREATE INDEX " + tableName + "_type_name_index ON " + dbSchema + "." + tableName + " (type_name);",
-	)
+	return nil
 }
 
-func (p Migrator) ObjectTypesTableCreate(tableName string) error {
+func (p *Migrator) ObjectTypesTableCreate() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
 	}
 	dbSchema := config.GetConfig("DB_SCHEMA")
 	return dbInstance.Exec(
-		"CREATE TABLE " + dbSchema + "." + tableName + " (" +
+		"CREATE TABLE " + dbSchema + "." + p.objectsTable + " (" +
 			"id BIGSERIAL PRIMARY KEY," +
 			"level INT NOT NULL DEFAULT 0," +
 			"short_name VARCHAR(255) NOT NULL DEFAULT ''," +
@@ -50,14 +65,14 @@ func (p Migrator) ObjectTypesTableCreate(tableName string) error {
 	)
 }
 
-func (p Migrator) HierarchyTableCreate(tableName string) error {
+func (p *Migrator) HierarchyTableCreate() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
 	}
 	dbSchema := config.GetConfig("DB_SCHEMA")
 	err = dbInstance.Exec(
-		"CREATE TABLE " + dbSchema + "." + tableName + " (" +
+		"CREATE TABLE " + dbSchema + "." + p.hierarchyTable + " (" +
 			"id BIGSERIAL PRIMARY KEY," +
 			"object_id INT NOT NULL DEFAULT 0," +
 			"parent_object_id INT NOT NULL DEFAULT 0);",
@@ -66,20 +81,17 @@ func (p Migrator) HierarchyTableCreate(tableName string) error {
 		return err
 	}
 
-	return dbInstance.Exec(
-		"CREATE INDEX " + tableName + "_object_id_index ON " + dbSchema + "." + tableName + " (object_id);" +
-			" CREATE INDEX " + tableName + "_parent_object_id_index ON " + dbSchema + "." + tableName + " (parent_object_id);",
-	)
+	return nil
 }
 
-func (p Migrator) KladrTableCreate(tableName string) error {
+func (p *Migrator) KladrTableCreate() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
 	}
 	dbSchema := config.GetConfig("DB_SCHEMA")
 	err = dbInstance.Exec(
-		"CREATE TABLE " + dbSchema + "." + tableName + " (" +
+		"CREATE TABLE " + dbSchema + "." + p.kladrTable + " (" +
 			"id BIGSERIAL PRIMARY KEY," +
 			"object_id INT NOT NULL DEFAULT 0," +
 			"kladr_id VARCHAR(50) NOT NULL DEFAULT '');",
@@ -87,14 +99,41 @@ func (p Migrator) KladrTableCreate(tableName string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (p *Migrator) CreateIndexes() error {
+	dbInstance, err := db.GetDbInstance()
+	if err != nil {
+		return err
+	}
+	dbSchema := config.GetConfig("DB_SCHEMA")
+
+	err = dbInstance.Exec(
+		"CREATE INDEX " + p.kladrTable + "_object_id_index ON " + dbSchema + "." + p.kladrTable + " (object_id);" +
+			" CREATE INDEX " + p.kladrTable + "_kladr_id_index ON " + dbSchema + "." + p.kladrTable + " (kladr_id);",
+	)
+	if err != nil {
+		return err
+	}
+
+	err = dbInstance.Exec(
+		"CREATE INDEX " + p.hierarchyTable + "_object_id_index ON " + dbSchema + "." + p.hierarchyTable + " (object_id);" +
+			" CREATE INDEX " + p.hierarchyTable + "_parent_object_id_index ON " + dbSchema + "." + p.hierarchyTable + " (parent_object_id);",
+	)
+	if err != nil {
+		return err
+	}
 
 	return dbInstance.Exec(
-		"CREATE INDEX " + tableName + "_object_id_index ON " + dbSchema + "." + tableName + " (object_id);" +
-			" CREATE INDEX " + tableName + "_kladr_id_index ON " + dbSchema + "." + tableName + " (kladr_id);",
+		"CREATE INDEX " + p.objectsTable + "_name_index ON " + dbSchema + "." + p.objectsTable + " (name);" +
+			" CREATE INDEX " + p.objectsTable + "_object_guid_index ON " + dbSchema + "." + p.objectsTable + " (object_guid);" +
+			" CREATE INDEX " + p.objectsTable + "_object_id_index ON " + dbSchema + "." + p.objectsTable + " (object_id);" +
+			" CREATE INDEX " + p.objectsTable + "_type_name_index ON " + dbSchema + "." + p.objectsTable + " (type_name);",
 	)
 }
 
-func (p Migrator) MigrateFromTempTables() error {
+func (p *Migrator) MigrateFromTempTables() error {
 	err := p.dropOldTables()
 	if err != nil {
 		return err
@@ -106,7 +145,7 @@ func (p Migrator) MigrateFromTempTables() error {
 	return p.renameIndexes()
 }
 
-func (p Migrator) dropOldTables() error {
+func (p *Migrator) dropOldTables() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -135,7 +174,7 @@ func (p Migrator) dropOldTables() error {
 	return err
 }
 
-func (p Migrator) renameTables() error {
+func (p *Migrator) renameTables() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -169,7 +208,7 @@ func (p Migrator) renameTables() error {
 	return err
 }
 
-func (p Migrator) renameIndexes() error {
+func (p *Migrator) renameIndexes() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -251,7 +290,7 @@ func (p Migrator) renameIndexes() error {
 
 type ViewCreator struct{}
 
-func (v ViewCreator) CreateSettlementsParentsView() error {
+func (v *ViewCreator) CreateSettlementsParentsView() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -262,19 +301,19 @@ func (v ViewCreator) CreateSettlementsParentsView() error {
 	FiasKladrTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE"))
 	HierarchyObjectsTable := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_HIERARCHY_TABLE"))
 
-	query := fmt.Sprintf("CREATE MATERIALIZED VIEW settlements_parents AS"+
-		"SELECT fias.id,"+
-		"fias.settlement_id,"+
-		"fias.parent_id"+
-		"FROM (WITH cities AS (SELECT %s.object_id"+
-		"FROM %s"+
-		"JOIN %s ON %s.object_id = %s.object_id"+
-		"WHERE (level < 6 OR type_name IN"+
-		"('г', 'г.', 'пгт', 'пгт.', 'Респ', 'обл', 'обл.', 'Аобл', 'а.обл.', 'а.окр.',"+
-		"'АО', 'г.ф.з.')))"+
-		"SELECT %s.id, %s.object_id AS settlement_id, parent_object_id AS parent_id"+
-		"FROM %s"+
-		"JOIN cities AS c1 ON c1.object_id = %s.object_id"+
+	query := fmt.Sprintf("CREATE MATERIALIZED VIEW settlements_parents AS "+
+		"SELECT fias.id, "+
+		"fias.settlement_id, "+
+		"fias.parent_id "+
+		"FROM (WITH cities AS (SELECT %s.object_id "+
+		"FROM %s "+
+		"JOIN %s ON %s.object_id = %s.object_id "+
+		"WHERE (level < 6 OR type_name IN "+
+		"('г', 'г.', 'пгт', 'пгт.', 'Респ', 'обл', 'обл.', 'Аобл', 'а.обл.', 'а.окр.', "+
+		"'АО', 'г.ф.з.'))) "+
+		"SELECT %s.id, %s.object_id AS settlement_id, parent_object_id AS parent_id "+
+		"FROM %s "+
+		"JOIN cities AS c1 ON c1.object_id = %s.object_id "+
 		"JOIN cities AS c2 ON c2.object_id = %s.parent_object_id) AS fias;",
 		ObjectsTable,
 		ObjectsTable,
@@ -294,17 +333,17 @@ func (v ViewCreator) CreateSettlementsParentsView() error {
 		return err
 	}
 
-	query = "create index settlements_parents_id" +
-		"on settlements_parents (id);" +
-		"create index settlements_parents_settlement_id" +
-		"on settlements_parents (settlement_id);" +
-		"create index settlements_parents_parent_id" +
+	query = "create index settlements_parents_id " +
+		"on settlements_parents (id); " +
+		"create index settlements_parents_settlement_id " +
+		"on settlements_parents (settlement_id); " +
+		"create index settlements_parents_parent_id " +
 		"on settlements_parents (parent_id);"
 
 	return dbInstance.Exec(query)
 }
 
-func (v ViewCreator) CreateSettlementsView() error {
+func (v *ViewCreator) CreateSettlementsView() error {
 	dbInstance, err := db.GetDbInstance()
 	if err != nil {
 		return err
@@ -315,27 +354,27 @@ func (v ViewCreator) CreateSettlementsView() error {
 	ObjectTypesTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECT_TYPES_TABLE"))
 	FiasKladrTableName := fmt.Sprintf("%s.%s", dbSchema, config.GetConfig("DB_ORIGINAL_OBJECTS_KLADR_TABLE"))
 
-	query := fmt.Sprintf("CREATE MATERIALIZED VIEW settlements AS"+
-		"SELECT fias.id,"+
-		"fias.fias_id,"+
-		"fias.kladr_id,"+
-		"fias.type,"+
-		"fias.type_short,"+
-		"fias.name,"+
-		"fias.created_at"+
-		"FROM (SELECT %s.object_id                                            as id,"+
-		"object_guid                                                                as fias_id,"+
+	query := fmt.Sprintf("CREATE MATERIALIZED VIEW settlements AS "+
+		"SELECT fias.id, "+
+		"fias.fias_id, "+
+		"fias.kladr_id, "+
+		"fias.type, "+
+		"fias.type_short, "+
+		"fias.name, "+
+		"fias.created_at "+
+		"FROM (SELECT %s.object_id                                            as id, "+
+		"object_guid                                                                as fias_id, "+
 		"%s.kladr_id,"+
-		"replace(LOWER(%s.name), '.', '')                            as type,"+
-		"replace(LOWER(type_name), '.', '')                                             as type_short,"+
-		"%s.name,"+
-		"to_char(now(), 'YYYY-MM-DD HH12:MI:SS'::text)::timestamp without time zone AS created_at"+
-		"FROM %s"+
-		"JOIN %s ON %s.object_id = %s.object_id"+
-		"LEFT JOIN %s ON"+
-		"%s.type_name = %s.short_name AND %s.level = %s.level"+
-		"WHERE %s.level < 6"+
-		"OR type_name IN"+
+		"replace(LOWER(%s.name), '.', '')                            as type, "+
+		"replace(LOWER(type_name), '.', '')                                             as type_short, "+
+		"%s.name, "+
+		"to_char(now(), 'YYYY-MM-DD HH12:MI:SS'::text)::timestamp without time zone AS created_at "+
+		"FROM %s "+
+		"JOIN %s ON %s.object_id = %s.object_id "+
+		"LEFT JOIN %s ON "+
+		"%s.type_name = %s.short_name AND %s.level = %s.level "+
+		"WHERE %s.level < 6 "+
+		"OR type_name IN "+
 		"('г', 'г.', 'пгт', 'пгт.', 'Респ', 'обл', 'обл.', 'Аобл', 'а.обл.', 'а.окр.', 'АО', 'г.ф.з.')) AS fias;",
 		ObjectsTable,
 		FiasKladrTableName,
@@ -359,13 +398,13 @@ func (v ViewCreator) CreateSettlementsView() error {
 		return err
 	}
 
-	query = "create index settlements_id" +
+	query = "create index settlements_id " +
 		"on settlements (id);" +
-		"create index settlements_fias_id" +
-		"on settlements (fias_id);" +
-		"create index settlements_kladr_id" +
-		"on settlements (kladr_id);" +
-		"create index settlements_type_short" +
+		"create index settlements_fias_id " +
+		"on settlements (fias_id); " +
+		"create index settlements_kladr_id " +
+		"on settlements (kladr_id); " +
+		"create index settlements_type_short " +
 		"on settlements (type_short);"
 
 	return dbInstance.Exec(query)
