@@ -109,27 +109,37 @@ func (p *Migrator) CreateIndexes() error {
 	}
 	dbSchema := config.GetConfig("DB_SCHEMA")
 
-	err = dbInstance.Exec(
-		"CREATE INDEX " + p.kladrTable + "_object_id_index ON " + dbSchema + "." + p.kladrTable + " (object_id);" +
-			" CREATE INDEX " + p.kladrTable + "_kladr_id_index ON " + dbSchema + "." + p.kladrTable + " (kladr_id);",
-	)
+	err = dbInstance.Exec(fmt.Sprintf(
+		"CREATE INDEX %s_object_id_index ON %s.%s (object_id); CREATE INDEX %s_kladr_id_index ON %s.%s (kladr_id);",
+		p.kladrTable, dbSchema, p.kladrTable,
+		p.kladrTable, dbSchema, p.kladrTable,
+	))
 	if err != nil {
 		return err
 	}
 
-	err = dbInstance.Exec(
-		"CREATE INDEX " + p.hierarchyTable + "_object_id_index ON " + dbSchema + "." + p.hierarchyTable + " (object_id);" +
-			" CREATE INDEX " + p.hierarchyTable + "_parent_object_id_index ON " + dbSchema + "." + p.hierarchyTable + " (parent_object_id);",
-	)
+	err = dbInstance.Exec(fmt.Sprintf(
+		"CREATE INDEX %s_object_id_index ON %s.%s (object_id); CREATE INDEX %s_parent_object_id_index ON %s.%s (parent_object_id);",
+		p.hierarchyTable, dbSchema, p.hierarchyTable,
+		p.hierarchyTable, dbSchema, p.hierarchyTable,
+	))
 	if err != nil {
 		return err
 	}
 
 	return dbInstance.Exec(
-		"CREATE INDEX " + p.objectsTable + "_name_index ON " + dbSchema + "." + p.objectsTable + " (name);" +
-			" CREATE INDEX " + p.objectsTable + "_object_guid_index ON " + dbSchema + "." + p.objectsTable + " (object_guid);" +
-			" CREATE INDEX " + p.objectsTable + "_object_id_index ON " + dbSchema + "." + p.objectsTable + " (object_id);" +
-			" CREATE INDEX " + p.objectsTable + "_type_name_index ON " + dbSchema + "." + p.objectsTable + " (type_name);",
+		fmt.Sprintf(
+			`
+			CREATE INDEX %s_name_index ON %s.%s (name);
+			CREATE INDEX %s_object_guid_index ON %s.%s (object_guid);
+			CREATE INDEX %s_object_id_index ON %s.%s (object_id);
+			CREATE INDEX %s_type_name_index ON %s.%s (type_name);
+		`,
+			p.objectsTable, dbSchema, p.objectsTable,
+			p.objectsTable, dbSchema, p.objectsTable,
+			p.objectsTable, dbSchema, p.objectsTable,
+			p.objectsTable, dbSchema, p.objectsTable,
+		),
 	)
 }
 
@@ -317,20 +327,42 @@ func (v *ViewCreator) CreateSettlementsParentsView() error {
 	}
 	HierarchyObjectsTable := fmt.Sprintf("%s.%s", dbSchema, HierarchyObjectsTableName)
 
-	query := fmt.Sprintf("CREATE MATERIALIZED VIEW %s.settlements_parents AS "+
-		"SELECT fias.id, "+
-		"fias.settlement_id, "+
-		"fias.parent_id "+
-		"FROM (WITH cities AS (SELECT %s.object_id "+
-		"FROM %s "+
-		"JOIN %s ON %s.object_id = %s.object_id "+
-		"WHERE (level < 6 OR type_name IN "+
-		"('г', 'г.', 'пгт', 'пгт.', 'Респ', 'обл', 'обл.', 'Аобл', 'а.обл.', 'а.окр.', "+
-		"'АО', 'г.ф.з.'))) "+
-		"SELECT %s.id, %s.object_id AS settlement_id, parent_object_id AS parent_id "+
-		"FROM %s "+
-		"JOIN cities AS c1 ON c1.object_id = %s.object_id "+
-		"JOIN cities AS c2 ON c2.object_id = %s.parent_object_id) AS fias;",
+	query := fmt.Sprintf(
+		`
+		CREATE MATERIALIZED VIEW %s.settlements_parents AS 
+		SELECT 
+		  fias.id, 
+		  fias.settlement_id, 
+		  fias.parent_id 
+		FROM 
+		  (
+			WITH cities AS (
+			  SELECT 
+				%s.object_id 
+			  FROM 
+				%s 
+				JOIN %s ON %s.object_id = %s.object_id 
+			  WHERE 
+				(
+				  level < 6 
+				  OR type_name IN (
+					'г', 'г.', 'пгт', 'пгт.', 'Респ', 
+					'обл', 'обл.', 'Аобл', 
+					'а.обл.', 'а.окр.', 'АО', 
+					'г.ф.з.'
+				  )
+				)
+			) 
+			SELECT 
+			  %s.id, 
+			  %s.object_id AS settlement_id, 
+			  parent_object_id AS parent_id 
+			FROM 
+			  %s 
+			  JOIN cities AS c1 ON c1.object_id = %s.object_id 
+			  JOIN cities AS c2 ON c2.object_id = %s.parent_object_id
+		  ) AS fias;
+		`,
 		dbSchema,
 		ObjectsTable,
 		ObjectsTable,
@@ -350,12 +382,19 @@ func (v *ViewCreator) CreateSettlementsParentsView() error {
 		return err
 	}
 
-	query = fmt.Sprintf("create index settlements_parents_id "+
-		"on %s.settlements_parents (id); "+
-		"create index settlements_parents_settlement_id "+
-		"on %s.settlements_parents (settlement_id); "+
-		"create index settlements_parents_parent_id "+
-		"on %s.settlements_parents (parent_id);", dbSchema, dbSchema, dbSchema)
+	query = fmt.Sprintf(
+		`
+		create index settlements_parents_id
+			on %s.settlements_parents (id);
+		create index settlements_parents_settlement_id
+			on %s.settlements_parents (settlement_id);
+		create index settlements_parents_parent_id
+			on %s.settlements_parents (parent_id);
+		`,
+		dbSchema,
+		dbSchema,
+		dbSchema,
+	)
 
 	return dbInstance.Exec(query)
 }
@@ -385,28 +424,37 @@ func (v *ViewCreator) CreateSettlementsView() error {
 	}
 	FiasKladrTable := fmt.Sprintf("%s.%s", dbSchema, fiasKladrTableName)
 
-	query := fmt.Sprintf("CREATE MATERIALIZED VIEW %s.settlements AS "+
-		"SELECT fias.id, "+
-		"fias.fias_id, "+
-		"fias.kladr_id, "+
-		"fias.type, "+
-		"fias.type_short, "+
-		"fias.name, "+
-		"fias.created_at "+
-		"FROM (SELECT %s.object_id                                            as id, "+
-		"object_guid                                                                as fias_id, "+
-		"%s.kladr_id,"+
-		"replace(LOWER(%s.name), '.', '')                            as type, "+
-		"replace(LOWER(type_name), '.', '')                                             as type_short, "+
-		"%s.name, "+
-		"to_char(now(), 'YYYY-MM-DD HH12:MI:SS'::text)::timestamp without time zone AS created_at "+
-		"FROM %s "+
-		"JOIN %s ON %s.object_id = %s.object_id "+
-		"LEFT JOIN %s ON "+
-		"%s.type_name = %s.short_name AND %s.level = %s.level "+
-		"WHERE %s.level < 6 "+
-		"OR type_name IN "+
-		"('г', 'г.', 'пгт', 'пгт.', 'Респ', 'обл', 'обл.', 'Аобл', 'а.обл.', 'а.окр.', 'АО', 'г.ф.з.')) AS fias;",
+	// Используйте подстановку с учетом переменных схемы и таблиц
+	query := fmt.Sprintf(`
+		CREATE MATERIALIZED VIEW %s.settlements AS
+		SELECT
+			fias.id,
+			fias.fias_id,
+			fias.kladr_id,
+			fias.type,
+			fias.type_short,
+			fias.name,
+			fias.created_at
+		FROM (
+			SELECT
+				%s.object_id as id,
+				object_guid as fias_id,
+				%s.kladr_id,
+				REPLACE(LOWER(%s.name), '.', '') as type,
+				REPLACE(LOWER(type_name), '.', '') as type_short,
+				%s.name,
+				to_char(now(), 'YYYY-MM-DD HH12:MI:SS'::text)::timestamp without time zone AS created_at
+			FROM
+				%s
+			JOIN
+				%s ON %s.object_id = %s.object_id
+			LEFT JOIN
+				%s ON %s.type_name = %s.short_name AND %s.level = %s.level
+			WHERE
+				%s.level < 6
+				OR type_name IN ('г', 'г.', 'пгт', 'пгт.', 'Респ', 'обл', 'обл.', 'Аобл', 'а.обл.', 'а.окр.', 'АО', 'г.ф.з.')
+		) AS fias;
+		`,
 		dbSchema,
 		ObjectsTable,
 		FiasKladrTable,
