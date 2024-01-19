@@ -6,6 +6,7 @@ build/mysql
 build/pgsql
 build/app
 build/.env
+debug
 build/docker-compose.yml
 main
 main.exe

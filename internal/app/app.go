@@ -13,6 +13,8 @@ import (
 	"fias_to_sql/internal/services/terminal"
 	"fias_to_sql/migrations"
 	"fias_to_sql/pkg/db"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"time"
 )
@@ -89,6 +91,12 @@ func Run() error {
 		logger.Println("start shutdown")
 	})
 
+	if config.GetConfig("APP_DEBUG") == "true" {
+		logger.Println("debugger start")
+		go http.ListenAndServe("localhost:8585", nil)
+	}
+
+	logger.Println("start import")
 	err = fias.ImportXml(
 		ctx,
 		path,
