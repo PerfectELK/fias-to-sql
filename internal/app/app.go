@@ -75,7 +75,9 @@ func Run() error {
 
 	logger.Println("begin import")
 	beginTime := time.Now()
-
+	defer func() {
+		logger.Println("import time ", int(time.Since(beginTime).Seconds())/60, " minutes")
+	}()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -133,10 +135,6 @@ func Run() error {
 		return handler.ErrorHandler(err)
 	}
 	logger.Println("create additional views success")
-
 	logger.Println("import success")
-	endTime := time.Now()
-	logger.Println("import time ", float64(endTime.Unix()-beginTime.Unix())/60, " minutes")
-
 	return nil
 }
