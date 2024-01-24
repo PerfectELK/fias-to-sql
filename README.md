@@ -20,7 +20,6 @@ You may use .env file or command line arguments
 ### Cmd args
 
 ```
--import-destination=<json|db>
 -db-driver=<mysql|pgsql)>
 -db-host=<127.0.0.1>
 -db-port=<3306>

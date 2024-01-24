@@ -57,28 +57,21 @@ func Run() error {
 		return handler.ErrorHandler(err)
 	}
 
-	importDestination, err := fias.GetImportDestination()
+	logger.Println("create db and tables if not exists")
+	_, err = db.GetDbInstance()
 	if err != nil {
 		return handler.ErrorHandler(err)
 	}
 
-	if importDestination == "db" {
-		logger.Println("create db and tables if not exists")
-		_, err = db.GetDbInstance()
-		if err != nil {
-			return handler.ErrorHandler(err)
-		}
-
-		err = migrations.CreateDatabase()
-		if err != nil {
-			return handler.ErrorHandler(err)
-		}
-		err = migrations.CreateTables()
-		if err != nil {
-			return handler.ErrorHandler(err)
-		}
-		logger.Println("create db and tables success")
+	err = migrations.CreateDatabase()
+	if err != nil {
+		return handler.ErrorHandler(err)
 	}
+	err = migrations.CreateTables()
+	if err != nil {
+		return handler.ErrorHandler(err)
+	}
+	logger.Println("create db and tables success")
 
 	logger.Println("begin import")
 	beginTime := time.Now()
@@ -93,14 +86,18 @@ func Run() error {
 
 	if config.GetConfig("APP_DEBUG") == "true" {
 		logger.Println("debugger start")
-		go http.ListenAndServe("localhost:8585", nil)
+		go func() {
+			err := http.ListenAndServe("localhost:8585", nil)
+			if err != nil {
+				logger.Println("error when start debugger")
+			}
+		}()
 	}
 
 	logger.Println("start import")
 	err = fias.ImportXml(
 		ctx,
 		path,
-		importDestination,
 	)
 
 	if ctx.Err() != nil {
@@ -116,28 +113,26 @@ func Run() error {
 		return handler.ErrorHandler(err)
 	}
 
-	if importDestination == "db" {
-		logger.Println("begin create indexes")
-		err = migrations.CreateIndexes()
-		if err != nil {
-			return err
-		}
-		logger.Println("indexes created success")
-
-		logger.Println("begin migrate data from temp to original tables")
-		err = migrations.MigrateDataFromTempTables()
-		if err != nil {
-			return handler.ErrorHandler(err)
-		}
-		logger.Println("migration success")
-
-		logger.Println("create additional views")
-		err = migrations.CreateAdditionalViews()
-		if err != nil {
-			return handler.ErrorHandler(err)
-		}
-		logger.Println("create additional views success")
+	logger.Println("begin create indexes")
+	err = migrations.CreateIndexes()
+	if err != nil {
+		return err
 	}
+	logger.Println("indexes created success")
+
+	logger.Println("begin migrate data from temp to original tables")
+	err = migrations.MigrateDataFromTempTables()
+	if err != nil {
+		return handler.ErrorHandler(err)
+	}
+	logger.Println("migration success")
+
+	logger.Println("create additional views")
+	err = migrations.CreateAdditionalViews()
+	if err != nil {
+		return handler.ErrorHandler(err)
+	}
+	logger.Println("create additional views success")
 
 	logger.Println("import success")
 	endTime := time.Now()
