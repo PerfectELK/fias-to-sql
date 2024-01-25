@@ -11,8 +11,9 @@ import (
 	"fias_to_sql/internal/services/shutdown"
 	"fias_to_sql/pkg/slice"
 	"golang.org/x/sync/errgroup"
-	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 )
 
 func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
@@ -54,6 +55,8 @@ func getSortedXmlFiles(zf *zip.ReadCloser) []*zip.File {
 	return zipFiles
 }
 
+var filesWithAmount map[string]int
+
 func ImportXml(
 	ctx context.Context,
 	archivePath string,
@@ -66,16 +69,14 @@ func ImportXml(
 	}
 	defer zf.Close()
 
-	files := getSortedXmlFiles(zf)
-	filesWithAmount := shutdown.GetFilesWithAmount()
+	files := filesToChan(getSortedXmlFiles(zf))
 
-	threadNumber := 3
-	if tn := config.GetConfig("APP_THREAD_NUMBER"); tn != "" {
-		threadNumber, _ = strconv.Atoi(tn)
-	}
-	mutexChan := make(chan struct{}, threadNumber)
+	filesWithAmount = shutdown.GetFilesWithAmount()
+
 	g, onErrCtx := errgroup.WithContext(context.Background())
-	for _, file := range files {
+	mutexChan := make(chan struct{}, 10)
+
+	for file := range files {
 		if ctx.Err() != nil {
 			shutdown.PutFileToDump(shutdown.DumpFile{FileName: file.Name, RecordsAmount: 0})
 			continue
@@ -100,53 +101,50 @@ func ImportXml(
 
 		mutexChan <- struct{}{}
 		_file := file
-		f, err := _file.Open()
+		f, _ := _file.Open()
 		g.Go(func() error {
 			select {
 			case <-onErrCtx.Done():
 				<-mutexChan
 				return nil
 			default:
-				var amountForDump int
-				fileName := _file.Name
-				amount, err := ProcessingXml(
+				amountInFile, _ := filesWithAmount[_file.Name]
+				fiasCh := make(chan *types.FiasObjectList, 1200)
+				amount, err := ProcessingXmlToChan(
 					f,
 					objectType,
-					func(ol *types.FiasObjectList) error {
-						amountInFile, ok := filesWithAmount[fileName]
-						var amountForDumpResult int
-						if ok && amountInFile > amountForDump {
-							amountForDumpResult = amountInFile
-						} else {
-							amountForDumpResult = amountForDump
-						}
+					fiasCh,
+					amountInFile,
+				)
+				var amountForDumpResult int64
+				wg := sync.WaitGroup{}
+				for i := 0; i < 10; i++ {
+					wg.Add(1)
+					g.Go(func() error {
+						defer wg.Done()
 						select {
 						case <-onErrCtx.Done():
-							shutdown.PutFileToDump(shutdown.DumpFile{FileName: fileName, RecordsAmount: amountForDumpResult})
+							shutdown.PutFileToDump(shutdown.DumpFile{FileName: _file.Name, RecordsAmount: int(amountForDumpResult)})
 							return errors.New("error when import, thread stop")
 						case <-ctx.Done():
-							shutdown.PutFileToDump(shutdown.DumpFile{FileName: fileName, RecordsAmount: amountForDumpResult})
+							shutdown.PutFileToDump(shutdown.DumpFile{FileName: _file.Name, RecordsAmount: int(amountForDumpResult)})
 							return errors.New("shutdown, thread stop")
 						default:
-							if ok && amountInFile > amountForDump {
-								amountForDump += len(ol.List)
-								return nil
-							}
-							err = importToDb(ol)
-							if err == nil {
-								amountForDump += len(ol.List)
-							} else {
-								shutdown.PutFileToDump(shutdown.DumpFile{FileName: fileName, RecordsAmount: amountForDumpResult})
+							err := processingObjectList(fiasCh, &amountForDumpResult)
+							if err != nil {
+								shutdown.PutFileToDump(shutdown.DumpFile{FileName: _file.Name, RecordsAmount: int(amountForDumpResult)})
 							}
 							return err
 						}
-					},
-				)
+					})
+				}
+				wg.Wait()
 				if err != nil {
 					<-mutexChan
 					return err
 				}
 				<-mutexChan
+				f.Close()
 				logger.Println(_file.Name, ": records amount (", amount, ") [OK]")
 				return nil
 			}
@@ -159,6 +157,29 @@ func ImportXml(
 	}
 
 	return err
+}
+
+func processingObjectList(ch <-chan *types.FiasObjectList, counter *int64) error {
+	for ol := range ch {
+		err := importToDb(ol)
+		if err != nil {
+			return err
+		}
+		atomic.AddInt64(counter, int64(len(ol.List)))
+		ol.Clear()
+	}
+	return nil
+}
+
+func filesToChan(zf []*zip.File) <-chan *zip.File {
+	ch := make(chan *zip.File, 100)
+	go func() {
+		for _, f := range zf {
+			ch <- f
+		}
+		close(ch)
+	}()
+	return ch
 }
 
 func importToDb(list *types.FiasObjectList) error {
