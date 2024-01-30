@@ -33,6 +33,7 @@ func (m *Processor) Connect(dbName ...string) error {
 	if err != nil {
 		return err
 	}
+	db.SetMaxOpenConns(50)
 	m.db = db
 	m.isConnected = true
 	m.schema = config.GetConfig("DB_SCHEMA")

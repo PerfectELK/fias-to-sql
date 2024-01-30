@@ -74,8 +74,7 @@ func ImportXml(
 	filesWithAmount = shutdown.GetFilesWithAmount()
 
 	g, onErrCtx := errgroup.WithContext(context.Background())
-	mutexChan := make(chan struct{}, 10)
-
+	mutexChan := make(chan struct{}, 20)
 	for file := range files {
 		if ctx.Err() != nil {
 			shutdown.PutFileToDump(shutdown.DumpFile{FileName: file.Name, RecordsAmount: 0})
@@ -103,22 +102,19 @@ func ImportXml(
 		_file := file
 		f, _ := _file.Open()
 		g.Go(func() error {
+			defer func() {
+				<-mutexChan
+			}()
 			select {
 			case <-onErrCtx.Done():
-				<-mutexChan
 				return nil
 			default:
 				amountInFile, _ := filesWithAmount[_file.Name]
-				fiasCh := make(chan *types.FiasObjectList, 1200)
-				amount, err := ProcessingXmlToChan(
-					f,
-					objectType,
-					fiasCh,
-					amountInFile,
-				)
+				fiasCh := make(chan *types.FiasObjectList, 100)
+
 				var amountForDumpResult int64
 				wg := sync.WaitGroup{}
-				for i := 0; i < 10; i++ {
+				for i := 0; i < 30; i++ {
 					wg.Add(1)
 					g.Go(func() error {
 						defer wg.Done()
@@ -138,13 +134,18 @@ func ImportXml(
 						}
 					})
 				}
+
+				amount, err := ProcessingXmlToChan(
+					f,
+					objectType,
+					fiasCh,
+					amountInFile,
+				)
+
 				wg.Wait()
 				if err != nil {
-					<-mutexChan
 					return err
 				}
-				<-mutexChan
-				f.Close()
 				logger.Println(_file.Name, ": records amount (", amount, ") [OK]")
 				return nil
 			}
@@ -172,12 +173,12 @@ func processingObjectList(ch <-chan *types.FiasObjectList, counter *int64) error
 }
 
 func filesToChan(zf []*zip.File) <-chan *zip.File {
-	ch := make(chan *zip.File, 100)
+	ch := make(chan *zip.File, 5)
 	go func() {
+		defer close(ch)
 		for _, f := range zf {
 			ch <- f
 		}
-		close(ch)
 	}()
 	return ch
 }

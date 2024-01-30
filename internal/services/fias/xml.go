@@ -102,6 +102,7 @@ func ProcessingXmlToChan(
 		pass = passAmount[0]
 	}
 	defer closer.Close()
+	defer close(ch)
 
 	var xmlTag string
 	switch objectType {
@@ -172,9 +173,11 @@ func ProcessingXmlToChan(
 			}
 		}
 	}
-	ch <- al
-	counter += len(al.List)
-	close(ch)
+
+	if len(al.List) > 0 {
+		ch <- al
+		counter += len(al.List)
+	}
 
 	return counter, nil
 }
