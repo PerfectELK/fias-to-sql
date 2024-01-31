@@ -107,7 +107,9 @@ func ImportXml(
 			}()
 			select {
 			case <-onErrCtx.Done():
-				return nil
+				return errors.New("error when import, thread stop")
+			case <-ctx.Done():
+				return errors.New("shutdown, thread stop")
 			default:
 				amountInFile, _ := filesWithAmount[_file.Name]
 				fiasCh := make(chan *types.FiasObjectList, 100)
