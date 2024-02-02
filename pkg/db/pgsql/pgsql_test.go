@@ -1,7 +1,7 @@
 package pgsql
 
 import (
-	"fias_to_sql/internal/config"
+	"github.com/PerfectELK/go-import-fias/internal/config"
 	"testing"
 )
 

@@ -1,8 +1,8 @@
 package download
 
 import (
-	"fias_to_sql/internal/services/disk"
-	"fias_to_sql/internal/services/logger"
+	"github.com/PerfectELK/go-import-fias/internal/services/disk"
+	"github.com/PerfectELK/go-import-fias/internal/services/logger"
 	"io"
 	"net/http"
 	"os"

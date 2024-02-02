@@ -2,8 +2,8 @@ package shutdown
 
 import (
 	"encoding/json"
-	"fias_to_sql/internal/config"
-	"fias_to_sql/pkg/slice"
+	"github.com/PerfectELK/go-import-fias/internal/config"
+	"github.com/PerfectELK/go-import-fias/pkg/slice"
 	"os"
 	"os/signal"
 	"path/filepath"

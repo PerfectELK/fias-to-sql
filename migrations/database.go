@@ -2,10 +2,10 @@ package migrations
 
 import (
 	"errors"
-	"fias_to_sql/internal/config"
-	"fias_to_sql/pkg/db"
-	"fias_to_sql/pkg/db/helpers"
 	"fmt"
+	"github.com/PerfectELK/go-import-fias/internal/config"
+	"github.com/PerfectELK/go-import-fias/pkg/db"
+	"github.com/PerfectELK/go-import-fias/pkg/db/helpers"
 )
 
 func CreateDatabase() error {

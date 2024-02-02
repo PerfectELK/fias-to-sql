@@ -2,11 +2,11 @@ package pgsql
 
 import (
 	"database/sql"
-	"fias_to_sql/internal/config"
-	"fias_to_sql/pkg/db/helpers"
-	"fias_to_sql/pkg/db/interfaces"
-	"fias_to_sql/pkg/db/types"
 	"fmt"
+	"github.com/PerfectELK/go-import-fias/internal/config"
+	"github.com/PerfectELK/go-import-fias/pkg/db/helpers"
+	"github.com/PerfectELK/go-import-fias/pkg/db/interfaces"
+	"github.com/PerfectELK/go-import-fias/pkg/db/types"
 	_ "github.com/lib/pq"
 	"strings"
 	"unicode/utf8"

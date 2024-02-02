@@ -1,9 +1,9 @@
 package models
 
 import (
-	"fias_to_sql/internal/config"
-	"fias_to_sql/pkg/db"
-	"fias_to_sql/pkg/db/types"
+	"github.com/PerfectELK/go-import-fias/internal/config"
+	"github.com/PerfectELK/go-import-fias/pkg/db"
+	"github.com/PerfectELK/go-import-fias/pkg/db/types"
 	"strconv"
 )
 

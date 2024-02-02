@@ -1,9 +1,9 @@
 package pgsql
 
 import (
-	"fias_to_sql/internal/config"
-	"fias_to_sql/pkg/db"
 	"fmt"
+	"github.com/PerfectELK/go-import-fias/internal/config"
+	"github.com/PerfectELK/go-import-fias/pkg/db"
 )
 
 type Migrator struct {

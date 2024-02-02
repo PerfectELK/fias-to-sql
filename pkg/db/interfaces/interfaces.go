@@ -2,7 +2,7 @@ package interfaces
 
 import (
 	"database/sql"
-	"fias_to_sql/pkg/db/types"
+	"github.com/PerfectELK/go-import-fias/pkg/db/types"
 )
 
 type DbProcessor interface {

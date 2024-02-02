@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fias_to_sql/internal/app"
-	"fias_to_sql/internal/services/logger"
 	"fmt"
+	"github.com/PerfectELK/go-import-fias/internal/app"
+	"github.com/PerfectELK/go-import-fias/internal/services/logger"
 )
 
 func main() {

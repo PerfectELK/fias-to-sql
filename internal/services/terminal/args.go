@@ -1,8 +1,8 @@
 package terminal
 
 import (
-	"fias_to_sql/internal/config"
 	"flag"
+	"github.com/PerfectELK/go-import-fias/internal/config"
 	"strings"
 )
 

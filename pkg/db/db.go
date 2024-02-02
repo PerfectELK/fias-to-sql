@@ -2,10 +2,10 @@ package db
 
 import (
 	"errors"
-	"fias_to_sql/internal/config"
-	"fias_to_sql/pkg/db/interfaces"
-	"fias_to_sql/pkg/db/mysql"
-	"fias_to_sql/pkg/db/pgsql"
+	"github.com/PerfectELK/go-import-fias/internal/config"
+	"github.com/PerfectELK/go-import-fias/pkg/db/interfaces"
+	"github.com/PerfectELK/go-import-fias/pkg/db/mysql"
+	"github.com/PerfectELK/go-import-fias/pkg/db/pgsql"
 )
 
 var dbInstance interfaces.DbProcessor

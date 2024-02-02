@@ -2,7 +2,7 @@ package fias
 
 import (
 	"encoding/xml"
-	"fias_to_sql/internal/services/fias/types"
+	"github.com/PerfectELK/go-import-fias/internal/services/fias/types"
 	"io"
 	"time"
 )

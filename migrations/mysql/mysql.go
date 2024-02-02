@@ -1,8 +1,8 @@
 package mysql
 
 import (
-	"fias_to_sql/internal/config"
-	"fias_to_sql/pkg/db"
+	"github.com/PerfectELK/go-import-fias/internal/config"
+	"github.com/PerfectELK/go-import-fias/pkg/db"
 )
 
 type Migrator struct {

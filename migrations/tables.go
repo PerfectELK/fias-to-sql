@@ -2,11 +2,11 @@ package migrations
 
 import (
 	"errors"
-	"fias_to_sql/internal/config"
-	"fias_to_sql/internal/services/shutdown"
-	"fias_to_sql/migrations/mysql"
-	"fias_to_sql/migrations/pgsql"
-	"fias_to_sql/pkg/db"
+	"github.com/PerfectELK/go-import-fias/internal/config"
+	"github.com/PerfectELK/go-import-fias/internal/services/shutdown"
+	"github.com/PerfectELK/go-import-fias/migrations/mysql"
+	"github.com/PerfectELK/go-import-fias/migrations/pgsql"
+	"github.com/PerfectELK/go-import-fias/pkg/db"
 )
 
 type migrator interface {
